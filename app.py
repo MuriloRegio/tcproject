@@ -180,8 +180,6 @@ class cGUI:
 
 	def mouse_click(self,event):
 		self.coordinates.append((event.x,event.y))
-		#print "X:", event.x
-		#print "Y:", event.y
 
 
 def getMessages(gui,send,act):
@@ -192,6 +190,7 @@ def getMessages(gui,send,act):
 
 	while 1:
 		time.sleep(1) # in seconds
+		executed = 0
 		if len(pending)>0:
 			line = pending[0]
 			del pending[0]
@@ -199,11 +198,28 @@ def getMessages(gui,send,act):
 
 			r = None
 			if '|' in s:
+				executed = 1
 				command, s = s.split("|")
-				r = act.execute(command,gui.unresized_image,gui.file)
+				if pending_line is None:
+					#			    command,              image, file path
+					r = act.execute(command,gui.unresized_image, gui.file)
+					if r is None:
+						pending_line = command
+
+				else:
+					while len(pending)==0:
+						line = pending[0]
+						del pending[0]
+
+					#			           command,   goal,              image, file path, name of the new action
+					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, line)
+					pending_line = None
+
 
 			send.put(s)
-			send.put(r)
+			
+			if executed:
+				send.put(r)
 
 
 if __name__ == "__main__":
