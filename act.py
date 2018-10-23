@@ -10,6 +10,12 @@ def cropContract():
 		"pos" : "have ?obj"
 	}
 
+def cropDict():
+	return {"step":"return = crop(img___,coord___)",
+			"contract":cropContract(),
+			"par":"img,coord",
+			"name":"crop"}
+
 def paste(img,coord,obj):
 	size = (coord[2]-coord[0], coord[3]-coord[1])
 
@@ -25,9 +31,17 @@ def pasteContract():
 		"pos" : "at ?coord ?obj"
 	}
 
+def pasteDict():
+	return {"step":"return = paste(img___,coord___,obj___)",
+			"contract":pasteContract(),
+			"par":"img,coord,obj",
+			"name":"paste"}
+
 class ActionMaker():
-	def __init__(self):
-		self.known_actions = ["crop", "paste"]
+	def __init__(self,known_actions={"crop" : cropDict(), "paste" : pasteDict()}, known_functs = {"crop" : crop, "paste" : paste}):
+		self.known_actions = known_actions
+		self.known_functs = known_functs
+
 		self.learned_actions = {}
 								# {"swap":{
 								# 	"step":"im1=crop(img___,coord1___);img2=crop(img___,coord2___);img3=paste(img___,coord2___,img1___);\
@@ -41,17 +55,13 @@ class ActionMaker():
 								# }
 		self.learned_contracts = []
 
-		self.net = dnet.getNet()
-		self.meta = dnet.getMeta()
+		#self.net = dnet.getNet()
+		#self.meta = dnet.getMeta()
 
 
-	def joinDicts(self, d1,d2,img_count, rename=[],distinct=[]):
-		if "return" in d1["step"]:
-			d1["step"] = d1["step"].replace("return", "im{}".format(str(img_count)))
-			img_count += 1
-		if "return" in d2["step"]:
-			d2["step"] = d2["step"].replace("return", "im{}".format(str(img_count)))
-			img_count += 1
+	def joinDicts(self, d1,d2, rename=[],distinct=[],return_name=["img","img"]):
+		d1["step"] = d1["step"].replace("return", return_name[0])
+		d2["step"] = d2["step"].replace("return", return_name[1])
 
 		getSplits = lambda x, k : [y.split("=")[k] for y in x.replace(" ","").split(";")]
 
@@ -90,11 +100,12 @@ class ActionMaker():
 		calls1 = getSplits(f1,1)
 		calls2 = getSplits(f2,1)
 
-		for i,c in enumerate(assign2):
-			if c in assign1:
-				assign2[i] = "im{}".format(str(img_count))
-				img_count += 1
-				calls2 = map(lambda x : x.replace(c+"___",assign2[i]+"___"),calls2)
+		# for i,c in enumerate(assign2):
+		# 	if c in assign1:
+		# 		assign2[i] = "im{}".format(str(img_count))
+		# 		print assign2
+		# 		img_count += 1
+		# 		calls2 = map(lambda x : x.replace(c+"___",assign2[i]+"___"),calls2)
 
 		join = lambda l1,l2: map(lambda (x, y): x+"="+y,zip(l1,l2))
 		functs = ';'.join([';'.join(join(assign1,calls1)),';'.join(join(assign2,calls2))])
@@ -102,43 +113,37 @@ class ActionMaker():
 		#arruma contracts
 		contracts = None
 
-		return ({
+		return {
 			"step" : functs,
 			"contract" : contracts,
-			"par" : pars
-		},img_count)
+			"par" : pars,
+			"name" : "custom"
+		}
 
 	def toFunction(self,op):
-		if op == "crop":
-			return {"step":"return = crop(img___,coord___)",
-					"contract":cropContract(),
-					"par":"img,coord"}
-
-		elif op == "paste":
-			return {"step":"return = paste(img___,coord___,obj___)",
-					"contract":pasteContract(),
-					"par":"img,coord,obj"}
-		return None
-
-	def toCustomFunction(self,op):
 		try:
-			return self.learned_actions[op]
+			return self.known_actions[op]
 		except:
-			return None
+			try:
+				return self.learned_actions[op]
+			except:
+				return None
 
-	def createNew(self,line,goal,img,imgpath,aName):
+	def createNew(self,line,goal,img,imgpath,aName,det=None):
 		import solve
 
 		clauses = []
-		for a in self.known_actions:
-			d = self.toFunction(a)
-			clauses.append(solve.Clause(a,d["contract"]["pre"],d["contract"]["pos"]))
+		l_append = lambda dict : map(lambda (f, d) : clauses.append(solve.Clause(f,d["contract"]["pre"],d["contract"]["pos"])), dict.items())
 
-		for f,d in self.learned_actions:
-			clauses.append(solve.Clause(f,d["contract"]["pre"],d["contract"]["pos"]))
+		l_append(self.known_actions)
+		l_append(self.learned_actions)
+
+		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
+
+		if det is None:
+			det = dnet.detectBB(self.net, self.meta, imgpath)
 
 		asLogic = set([])
-		det = dnet.detectBB(self.net, self.meta, imgpath)
 		for k,coord in det.items():
 			asLogic.add("at {} {}".format(str(coord).replace(" ",""),k))
 			goal = goal.replace("?"+k, str(coord).replace(" ",""))
@@ -157,7 +162,9 @@ class ActionMaker():
 		command = args[0]
 		del args[0]
 		
-		if command == "noop":
+		fdict = self.toFunction(command)
+
+		if fdict == None:
 			return None
 
 		if det == None:
@@ -170,10 +177,6 @@ class ActionMaker():
 				args[i] = eval(arg)
 
 		args = [img]+args
-
-		fdict = self.getFunctDict(command)
-
-		assert fdict is not None
 
 		return self.runDict(fdict,args)
 
@@ -192,6 +195,9 @@ class ActionMaker():
 		assign = None
 		for line in funcDict["step"].replace(" ","").split(";"):
 			assign, command = line.split("=")
+			
+			f = command.split('(')[0]
+			command = command.replace(f,"self.known_functs['{}']".format(f))
 
 			for label in var:
 				func_par = label+"___"
@@ -202,15 +208,6 @@ class ActionMaker():
 
 		return var[assign]
 
-
-	def getFunctDict(self,funct):
-		funcDict = self.toFunction(funct)
-
-		if funcDict == None:
-			funcDict = self.toCustomFunction(funct)
-
-		return funcDict
-
 if __name__ == "__main__":
 		actor = ActionMaker()
 
@@ -218,9 +215,14 @@ if __name__ == "__main__":
 
 		im = Image.open(img)
 
+		try:
+			with open("example_person_dets.dat","r") as infile:
+				dets = eval(infile.read())
+		except:
+			dets = None
 
 		#res = actor.execute("crop___dog",im,img)
-		res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap")
+		res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap",dets)
 		# coord = [0,0, im.size[0],im.size[1]]
 		# res = actor.execute("crop___"+str(coord),im)
 

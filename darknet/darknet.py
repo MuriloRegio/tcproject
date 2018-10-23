@@ -193,13 +193,13 @@ def getMeta():
     return load_meta("cfg/coco.data")
 
 if __name__ == "__main__":
-    img = "data/dog.jpg"
+    img = "data/person.jpg"
     net = load_net("cfg/yolov3.cfg", "cfg/yolo.weights", 0)
     meta = load_meta("cfg/coco.data")
     r = detectBB(net, meta, img)
     print r
 
     #drawBB(img,r)
-    #with open("/tmp/r.dat","w") as outfile:
-    #    outfile.write(str(res))
+    with open("example_person_dets.dat","w") as outfile:
+        outfile.write(str(r))
 

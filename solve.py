@@ -1,6 +1,6 @@
 
 class Clause:
-	def __init__(self,name,preconditions,posconditions,complex_poscondition = lambda x,y : x):
+	def __init__(self,name,preconditions,posconditions):
 		slots = lambda l : [x for x in l.split("and")]
 		clear = lambda l : set(map(lambda x : x.strip(),l))
 
@@ -23,17 +23,13 @@ class Clause:
 			self.pos_pos = clear(positives(posconditions))
 			self.neg_pos = clear(negatives(posconditions))
 
-		self.complex_poscondition = complex_poscondition
-
 	def __str__(self):
 		return self.name+"\n"+\
 				str(self.pos_pre)+"\t"+str(self.neg_pre)+"\n"+\
 				str(self.pos_pos)+"\t"+str(self.neg_pos)
 
 	def apply(self, state):
-		new_state = state.union(self.pos_pos).difference(self.neg_pos)
-
-		return self.complex_poscondition(new_state,self)
+		return state.union(self.pos_pos).difference(self.neg_pos)
 
 	def applicable(self, state):
 		if '?' in str(self.pos_pre)+str(self.neg_pre):
@@ -167,6 +163,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals):
 	return found, plan
 
 def getRPlan(initial_state, actions, positive_goals, negative_goals):
+	l_applicable = lambda a : bool(a.pos_pos.intersection(c.pos_pre)) or bool(a.neg_pos.intersection(c.neg_pre))
+
 	from Queue import PriorityQueue as PQ
 	explored = set([])
 	states = PQ()
@@ -182,17 +180,16 @@ def getRPlan(initial_state, actions, positive_goals, negative_goals):
 	possible_actions = []
 	for a in actions:
 		for grounded,_ in a.ground(c):
+			#print str(grounded)
 			possible_actions.append(grounded)
 
 	for a in actions:
 		for grounded,_ in a.ground(initial_state,axis=1):
+			#print str(grounded)
 			possible_actions.append(grounded)
-
-	l_applicable = lambda a : bool(a.pos_pos.intersection(c.pos_pre)) or a.neg_pos.intersection(c.neg_pre)
 
 	while not states.empty():
 		cost, count, c, plan = states.get()
-
 
 		if c.applicable(initial_state):
 			return (True,plan)
@@ -228,41 +225,18 @@ def getRPlan(initial_state, actions, positive_goals, negative_goals):
 	#add case of failure, what was the closest it got
 	return (False,[[]])
 
-
-def phisics(s,c):
-	t = c.pos_pos
-
-	for elem in t:
-		if "at" in elem:
-			coord1 = elem.split(" ")[1]
-			coord2 = []
-			r = []
-
-			for el in s:
-				if "at" in el:
-					coord2 = el.split(" ")[1]
-
-					if coord2 == coord1 and el != elem:
-						r.append(el)
-
-			s = s.difference(set(r))
-
-	return s
-
 def clauseListToDictList(act,clauses):
 	bindings = {}
-	steps = {"rename":[], "distinct":[]}
+	del_pars = []
+	steps = {"return_name":[None,None],"distinct":[]}
 	dDict = None
-	count = 0
-	change = -1
+
 	for c in clauses:
 		fun = c.name.split(" ")[0]
-		d = act.getFunctDict(fun)
 
-		if fun == "paste":
-			if change < 0:
-				change = count
-			steps["rename"].append(("obj",count-change-1))
+		d = {}
+		for k,v in act.toFunction(fun).items():
+			d[k] = v
 
 		pos = set([' '.join((' '.join(c.pos_pos), ' '.join(map(lambda x: "not "+x,c.neg_pos))))])
 		caux = Clause(fun,d["contract"]["pos"],d["contract"]["pre"])
@@ -287,27 +261,31 @@ def clauseListToDictList(act,clauses):
 						while True:
 							newKey = k+str(i)
 							if newKey in bindings and v == bindings[newKey]:
-								change = 1
-								for alias,_ in steps["rename"]:
-									if alias == k:
-										change = 0
-								if change:
-									steps["distinct"].append((k,newKey))
+								steps["distinct"].append((k,newKey))
 								break
 							if newKey not in bindings:
 								bindings[newKey] = v
 								steps["distinct"].append((k,newKey))
 
+		if d["name"] == "crop":
+			for k,v in bindings.items():
+				if v == possibilities[0]["?obj"]:
+					n = k
+					del_pars.append(k)
+		else:
+			n = "img"
+
+		steps["return_name"] = steps["return_name"][1:] + [n]
+
 		if dDict == None:
 			dDict = d
 		else:
-			dDict,count = act.joinDicts(dDict,d,count,steps["rename"],steps["distinct"])
+			dDict = act.joinDicts(dDict,d,distinct=steps["distinct"],return_name=steps["return_name"])
 
-		steps = {"rename":[], "distinct":[]}
+		steps["distinct"] = []
 
-		if fun == "paste":
-			steps["rename"] = [("img",count-change)]
-
+	for p in reversed(del_pars):
+		dDict["par"] = dDict["par"].replace(",{}".format(p),"")
 
 	return dDict
 
@@ -320,8 +298,7 @@ if __name__ == "__main__":
 	c2 = Clause(
 		"paste",
 		"have ?obj",
-		"at ?coord ?obj",
-		phisics
+		"at ?coord ?obj"
 	)
 
 	target = Clause(
@@ -330,7 +307,7 @@ if __name__ == "__main__":
 		""
 	)
 
-	state = toSet("at 123 dog and at 321 cat")
+	state = toSet("at 123 dog and at 321 cat and have img")
 	#for c in c1.ground(target):
 	#	print str(c[0]), str(c[1])
 
@@ -338,7 +315,8 @@ if __name__ == "__main__":
 	plan = getPlan(state, [c1,c2], toSet("at 321 dog and at 123 cat"), set([]))
 	if plan[0]:
 		from act import ActionMaker
-		clauseListToDictList(ActionMaker(),plan)
+		plan = plan[1]
+		print clauseListToDictList(ActionMaker(),plan)
 	else:
 		print plan[1]
 		for a in plan[1][-1]:
