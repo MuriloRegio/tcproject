@@ -1,5 +1,6 @@
 from PIL import Image
 import darknet.darknet as dnet
+import sys
 
 def crop(img,coord):
 	return img.crop(coord)
@@ -55,8 +56,9 @@ class ActionMaker():
 								# }
 		self.learned_contracts = []
 
-		#self.net = dnet.getNet()
-		#self.meta = dnet.getMeta()
+		print "Loading Network..."
+		self.net = dnet.getNet()
+		self.meta = dnet.getMeta()
 
 
 	def joinDicts(self, d1,d2, rename=[],distinct=[],return_name=["img","img"]):
@@ -103,11 +105,11 @@ class ActionMaker():
 		# for i,c in enumerate(assign2):
 		# 	if c in assign1:
 		# 		assign2[i] = "im{}".format(str(img_count))
-		# 		print assign2
 		# 		img_count += 1
 		# 		calls2 = map(lambda x : x.replace(c+"___",assign2[i]+"___"),calls2)
 
 		join = lambda l1,l2: map(lambda (x, y): x+"="+y,zip(l1,l2))
+
 		functs = ';'.join([';'.join(join(assign1,calls1)),';'.join(join(assign2,calls2))])
 
 		#arruma contracts
@@ -133,15 +135,16 @@ class ActionMaker():
 		import solve
 
 		clauses = []
-		l_append = lambda dict : map(lambda (f, d) : clauses.append(solve.Clause(f,d["contract"]["pre"],d["contract"]["pos"])), dict.items())
 
+		l_append = lambda dict : map(lambda (f, d) : clauses.append(solve.Clause(f,d["contract"]["pre"],d["contract"]["pos"])), dict.items())
+		
 		l_append(self.known_actions)
 		l_append(self.learned_actions)
 
 		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
 
 		if det is None:
-			det = dnet.detectBB(self.net, self.meta, imgpath)
+			det = self.mkdetection(imgpath)
 
 		asLogic = set([])
 		for k,coord in det.items():
@@ -164,11 +167,13 @@ class ActionMaker():
 		
 		fdict = self.toFunction(command)
 
-		if fdict == None:
+		if fdict is None:
 			return None
 
-		if det == None:
-			det = dnet.detectBB(self.net, self.meta, imgpath)
+		if det is None:
+			det = self.mkdetection(imgpath)
+
+		assert det is not None
 
 		for i,arg in enumerate(args):
 			if arg in det:
@@ -207,6 +212,10 @@ class ActionMaker():
 			var[assign] = eval(command)
 
 		return var[assign]
+
+	def mkdetection(self, imgpath):
+		return dnet.detectBB(self.net, self.meta, imgpath)
+
 
 if __name__ == "__main__":
 		actor = ActionMaker()

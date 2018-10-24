@@ -183,6 +183,7 @@ def detectBB(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     path = "data/"+filename
     im.save(path)
 
+    print "Making the detections..."
     r = detect(net, meta, path, thresh, hier_thresh, nms)
     return getBB(r)
 
@@ -197,7 +198,7 @@ if __name__ == "__main__":
     net = load_net("cfg/yolov3.cfg", "cfg/yolo.weights", 0)
     meta = load_meta("cfg/coco.data")
     r = detectBB(net, meta, img)
-    print r
+    print(r)
 
     #drawBB(img,r)
     with open("example_person_dets.dat","w") as outfile:

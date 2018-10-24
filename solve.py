@@ -316,9 +316,6 @@ if __name__ == "__main__":
 	if plan[0]:
 		from act import ActionMaker
 		plan = plan[1]
-		print clauseListToDictList(ActionMaker(),plan)
+		print (clauseListToDictList(ActionMaker(),plan))
 	else:
-		print plan[1]
-		for a in plan[1][-1]:
-			print a.name
-		print len(plan[1][-1])
+		print("Failed")

@@ -1,6 +1,6 @@
 import os
 
-os.system("pip install -r requirements.txt")
+os.system("pip install --user -r requirements.txt")
 
 import urllib
 

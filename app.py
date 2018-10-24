@@ -22,6 +22,7 @@ class cGUI:
 		self.file = None
 		self.image = None
 		self.unresized_image = None
+		self.dets = None
 
 		self.queue = queue
 
@@ -83,11 +84,12 @@ class cGUI:
 			msg = self.queue.get(0)
 			
 			if type(msg) == str:
-				self.send(custom_msg=msg)
+				for m in msg.split("\\n"):
+					self.send(custom_msg=m)
 			elif msg is None:
 				self.send(custom_msg="Sorry, i couldn't do that")
 			else:
-				self.open_img(msg)
+				self.open_img(msg, False)
 		except Queue.Empty:
 			pass
 		self.top.after(100, self.process_queue)
@@ -98,6 +100,9 @@ class cGUI:
 			msg = self.entry_field.get()
 		else:
 			msg = custom_msg
+
+		if len(msg) == 0:
+			return
 
 		self.entry_field.delete(0, 'end')
 
@@ -129,6 +134,9 @@ class cGUI:
 	#open menu
 	def get_img(self):
 		self.file = askopenfilename(initialdir='D:/Users/')
+
+		if len(self.file) == 0:
+			return
 
 		pil_image = Image.open(self.file)
 
@@ -181,6 +189,27 @@ class cGUI:
 	def mouse_click(self,event):
 		self.coordinates.append((event.x,event.y))
 
+	def save(self,img):
+		self.open_img(img)
+		img.save("data/temp.jpg")
+		self.file = "data/temp.jpg"
+
+	def revert(self):
+		self.open_img(self.image)
+
+
+def getThisCoords(gui):
+	while len(gui.coordinates)<2:
+		pass
+	c1, c2 = gui.coordinates[:2]
+
+	del gui.coordinates[0]
+	del gui.coordinates[1]
+
+	op = lambda x, y: [min,max][x](c1[y],c2[y])
+
+	#		   xmin,    ymin,    xmax,    ymax
+	return (op(0,0), op(0,1), op(1,0), op(1,1))
 
 def getMessages(gui,send,act):
 	import agent
@@ -194,32 +223,62 @@ def getMessages(gui,send,act):
 		if len(pending)>0:
 			line = pending[0]
 			del pending[0]
-			s = b.getAnswer(line)
+			s = agt.getAnswer(line)
 
+			if len(s)==0:
+				s = agt.getAnswer("_-_-DEU RUIM-_-_")
+
+			s = s.split("|")
+
+			send.put(s[-1])
 			r = None
-			if '|' in s:
-				executed = 1
-				command, s = s.split("|")
-				if pending_line is None:
-					#			    command,              image, file path
-					r = act.execute(command,gui.unresized_image, gui.file)
-					if r is None:
-						pending_line = command
+			if len(s) == 2:
+				command  = s[0]
+				
+				if "det" == command:
+					gui.dets = act.mkdetections(gui.file)
+					
+				elif "add_det" in command:
+					if gui.dets is None:
+						gui.dets = act.mkdetections(gui.file)
 
-				else:
+					label = command.split("___")[1]
+
+					if label in gui.dets:
+						send.put("Label already in use!")
+						continue
+
+					gui.dets[label] = getThisCoords(gui)
+
+				elif pending_line is None and '?' not in command:
+					if "___this" in command:
+						command = command.replace("___this","___{}".format(str(getThisCoords(gui))))
+
+					#			    command,              image, file path, stored detections
+					r = act.execute(command,gui.unresized_image,  gui.file, gui.dets)
+					if r is None:
+						pending_line = command.replace(" and ","___")
+
+				elif '?' in command:
 					while len(pending)==0:
 						line = pending[0]
 						del pending[0]
 
-					#			           command,   goal,              image, file path, name of the new action
-					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, line)
+					#			           command,   goal,              image, file path, name of the new action, stored detections
+					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 line, gui.dets)
 					pending_line = None
-
-
-			send.put(s)
 			
-			if executed:
+			if r is not None:
 				send.put(r)
+				send.put("Save changes?")
+				while len(pending) == 0:
+					continue
+				line = pending[0]
+				del pending[0]
+				if "yes" in line or "yeah" in line or "sure" in line:
+					gui.save(r)
+				send.put("Ok")
+
 
 
 if __name__ == "__main__":
