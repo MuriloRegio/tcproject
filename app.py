@@ -219,31 +219,34 @@ def getMessages(gui,send,act):
 	agt = agent.bot()
 	pending = gui.getPendingMessages()
 	pending_line = None
+	name = None
 
 	while 1:
 		time.sleep(1) # in seconds
-		executed = 0
 		if len(pending)>0:
 			line = pending[0]
 			del pending[0]
 
-			s = [agt.getAnswer(line)]
-			while ' & ' in s[-1]:
-				s.append(agt.getAnswer(line))
-
-			s = ' and '.join(s)
+			s = agt.getAnswer(line)
+			while ' & ' in s:
+				splits = s.split(' & ')
+				answer = agt.getAnswer(splits[1])
+				s = "{} and {}".format(splits[0],answer)
 
 			if len(s)==0:
 				s = agt.getAnswer("_-_-DEU RUIM-_-_")
 
 			s = s.split("|")
 
-			print s
-
 			send.put(s[-1])
 			r = None
 			if len(s) == 2:
 				command  = s[0]
+
+				if '?' not in command:
+					command = command.replace(" and ","___").replace(" ","")
+
+				print command
 				
 				if "det" == command:
 					gui.dets = act.mkdetections(gui.file)
@@ -267,21 +270,17 @@ def getMessages(gui,send,act):
 
 					#			    command,              image, file path, stored detections
 					r = act.execute(command,gui.unresized_image,  gui.file, gui.dets)
+
 					if r is None:
-						pending_line = command.replace(" and ","___")
+						i = command.index('_')
+						name = command[:i]
+						pending_line = "noop"+command[i:]
 
 				elif '?' in command:
-					print command
-					print pending_line
-					send.put("What did you call that operation before?")
-					while len(pending)==0:
-						continue
-					line = pending[0]
-					del pending[0]
-
 					#			           command,   goal,              image, file path, name of the new action, stored detections
-					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 line, gui.dets)
+					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 name, gui.dets)
 					pending_line = None
+					name = None
 					print "done"
 			
 			if r is not None:
@@ -294,6 +293,9 @@ def getMessages(gui,send,act):
 				if "yes" in line or "yeah" in line or "sure" in line:
 					send.put([r])
 				send.put("Ok")
+			elif len(s) == 2 and pending_line is None:
+				send.put("I failed you.")
+
 
 
 
