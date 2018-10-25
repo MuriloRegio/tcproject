@@ -245,8 +245,6 @@ def getMessages(gui,send,act):
 
 				if '?' not in command:
 					command = command.replace(" and ","___").replace(" ","")
-
-				print command
 				
 				if "det" == command:
 					gui.dets = act.mkdetections(gui.file)
@@ -281,7 +279,6 @@ def getMessages(gui,send,act):
 					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 name, gui.dets)
 					pending_line = None
 					name = None
-					print "done"
 			
 			if r is not None:
 				send.put(r)
