@@ -226,12 +226,19 @@ def getMessages(gui,send,act):
 		if len(pending)>0:
 			line = pending[0]
 			del pending[0]
-			s = agt.getAnswer(line)
+
+			s = [agt.getAnswer(line)]
+			while ' & ' in s[-1]:
+				s.append(agt.getAnswer(line))
+
+			s = ' and '.join(s)
 
 			if len(s)==0:
 				s = agt.getAnswer("_-_-DEU RUIM-_-_")
 
 			s = s.split("|")
+
+			print s
 
 			send.put(s[-1])
 			r = None
@@ -265,6 +272,8 @@ def getMessages(gui,send,act):
 
 				elif '?' in command:
 					print command
+					print pending_line
+					send.put("What did you call that operation before?")
 					while len(pending)==0:
 						continue
 					line = pending[0]
@@ -273,6 +282,7 @@ def getMessages(gui,send,act):
 					#			           command,   goal,              image, file path, name of the new action, stored detections
 					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 line, gui.dets)
 					pending_line = None
+					print "done"
 			
 			if r is not None:
 				send.put(r)
