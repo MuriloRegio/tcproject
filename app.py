@@ -233,7 +233,7 @@ def getMessages(gui,send,act):
 			send.put(s[-1])
 			r = None
 			if len(s) == 2:
-				command  = s[0]
+				command  = s[0].replace(" ","")
 				
 				if "det" == command:
 					gui.dets = act.mkdetections(gui.file)
