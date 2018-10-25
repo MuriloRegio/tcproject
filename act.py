@@ -19,6 +19,8 @@ def cropDict():
 
 def paste(img,coord,obj):
 	size = (coord[2]-coord[0], coord[3]-coord[1])
+	if type(obj) is list:
+		obj = crop(img,obj)
 
 	res_obj = obj.resize(size, Image.ANTIALIAS)
 

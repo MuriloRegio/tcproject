@@ -83,13 +83,16 @@ class cGUI:
 		try:
 			msg = self.queue.get(0)
 			
-			if type(msg) == str:
+			if type(msg) is str:
 				for m in msg.split("\\n"):
 					self.send(custom_msg=m)
-			elif msg is None:
+			elif msg == "None":
 				self.send(custom_msg="Sorry, i couldn't do that")
 			else:
-				self.open_img(msg, False)
+				if type(msg) is list:
+					self.save(msg[0])
+				else:
+					self.open_img(msg, False)
 		except Queue.Empty:
 			pass
 		self.top.after(100, self.process_queue)
@@ -233,7 +236,7 @@ def getMessages(gui,send,act):
 			send.put(s[-1])
 			r = None
 			if len(s) == 2:
-				command  = s[0].replace(" ","")
+				command  = s[0]
 				
 				if "det" == command:
 					gui.dets = act.mkdetections(gui.file)
@@ -251,6 +254,7 @@ def getMessages(gui,send,act):
 					gui.dets[label] = getThisCoords(gui)
 
 				elif pending_line is None and '?' not in command:
+					command = command.replace(" ","")
 					if "___this" in command:
 						command = command.replace("___this","___{}".format(str(getThisCoords(gui))))
 
@@ -260,9 +264,11 @@ def getMessages(gui,send,act):
 						pending_line = command.replace(" and ","___")
 
 				elif '?' in command:
+					print command
 					while len(pending)==0:
-						line = pending[0]
-						del pending[0]
+						continue
+					line = pending[0]
+					del pending[0]
 
 					#			           command,   goal,              image, file path, name of the new action, stored detections
 					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 line, gui.dets)
@@ -276,7 +282,7 @@ def getMessages(gui,send,act):
 				line = pending[0]
 				del pending[0]
 				if "yes" in line or "yeah" in line or "sure" in line:
-					gui.save(r)
+					send.put([r])
 				send.put("Ok")
 
 
