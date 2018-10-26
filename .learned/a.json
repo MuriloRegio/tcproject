@@ -1,0 +1,1 @@
+{'swap': {'step': 'obj=crop(img___,coord___);obj0=crop(img___,coord0___);img=paste(img___,coord0___,obj___);img=paste(img___,coord___,obj0___)', 'par': 'img,coord,coord0', 'contract': None, 'name': 'custom'}}
