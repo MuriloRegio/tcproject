@@ -59,11 +59,11 @@ class ActionMaker():
 		self.learned_contracts = []
 
 		print "Loading Network..."
-		self.net = dnet.getNet()
+		#self.net = dnet.getNet()
 		self.meta = dnet.getMeta()
 
 
-	def joinDicts(self, d1,d2, rename=[],distinct=[],return_name=["img","img"]):
+	def joinDicts(self, d1,d2, distinct=[],return_name=["img","img"]):
 		d1["step"] = d1["step"].replace("return", return_name[0])
 		d2["step"] = d2["step"].replace("return", return_name[1])
 
@@ -85,16 +85,6 @@ class ActionMaker():
 			if par not in pars:
 				pars.append(par)
 
-		for atual,target in rename:
-			if type(target) == int:
-				f = getSplits(f1,0)[target]
-			else:
-				f = target
-
-			f2 = f2.replace(atual+"___",f+"___")
-			if atual not in f1:
-				pars.remove(atual)
-
 		pars = ','.join(pars)
 
 
@@ -104,18 +94,43 @@ class ActionMaker():
 		calls1 = getSplits(f1,1)
 		calls2 = getSplits(f2,1)
 
-		# for i,c in enumerate(assign2):
-		# 	if c in assign1:
-		# 		assign2[i] = "im{}".format(str(img_count))
-		# 		img_count += 1
-		# 		calls2 = map(lambda x : x.replace(c+"___",assign2[i]+"___"),calls2)
-
 		join = lambda l1,l2: map(lambda (x, y): x+"="+y,zip(l1,l2))
 
 		functs = ';'.join([';'.join(join(assign1,calls1)),';'.join(join(assign2,calls2))])
 
 		#arruma contracts
-		contracts = None
+		d1_cont = {"pre":set(d1["contract"]["pre"].split(" and ")),"pos":set(d1["contract"]["pos"].split(" and "))}
+		d2_cont = {"pre":set(d2["contract"]["pre"].split(" and ")),"pos":set(d2["contract"]["pos"].split(" and "))}
+
+		for t in d2_cont:
+			for i,c in enumerate(d2_cont[t]):
+				splits = c.split(' ')
+
+				for j,s in enumerate(splits[1:]):
+					for elem,newName in distinct:
+						elem = '?' + elem
+						if s == elem:
+							splits[j+1] = '?'+newName
+
+				d2_cont[t].remove(c)
+				d2_cont[t].add(' '.join(splits))
+
+		for c in d2_cont["pre"]:
+			if c in d1_cont["pos"]:
+				d1_cont["pos"].remove(c)
+			else:
+				d1_cont["pre"].add(c)
+
+
+		for c in d2_cont["pos"]:
+			if len(c) > 5 and c[:5] == "not ":
+				if c[5:] in d1_cont["pos"]:
+					d1_cont["pos"].remove(c[5:])
+			d1_cont["pos"].add(c)
+
+		contracts = {}
+		contracts["pre"] = ' and '.join(d1_cont["pre"])
+		contracts["pos"] = ' and '.join(d1_cont["pos"])
 
 		return {
 			"step" : functs,

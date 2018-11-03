@@ -178,14 +178,14 @@ def getRPlan(initial_state, actions, positive_goals, negative_goals):
 	states.put((0,0,c,[]))
 
 	possible_actions = []
-	for a in actions:
-		for grounded,_ in a.ground(c):
-			#print str(grounded)
-			possible_actions.append(grounded)
+
+	# for a in actions:
+	# 	for grounded,_ in a.ground(c):
+	# 		#print str(grounded)
+	# 		possible_actions.append(grounded)
 
 	for a in actions:
 		for grounded,_ in a.ground(initial_state,axis=1):
-			#print str(grounded)
 			possible_actions.append(grounded)
 
 	while not states.empty():
@@ -194,8 +194,18 @@ def getRPlan(initial_state, actions, positive_goals, negative_goals):
 		if c.applicable(initial_state):
 			return (True,plan)
 
-		# for a in actions:
-		# 	for grounded,clause in a.ground(c):
+		for a in actions:
+			for grounded,_ in a.ground(c):
+				if grounded not in possible_actions: 
+					#Should be the same as defining 'possible_actions'
+					#as a set, but it isn't
+					possible_actions.append(grounded)
+
+		for a in possible_actions:
+			for grounded,_ in a.ground(initial_state,axis=1):
+				if grounded not in possible_actions: 
+					possible_actions.append(grounded)
+
 		for a in filter(l_applicable,possible_actions):
 			new_pos_pre = c.pos_pre.union(a.pos_pre).difference(c.pos_pre.intersection(a.pos_pos))
 			new_neg_pre = c.neg_pre.union(a.neg_pre).difference(c.neg_pre.intersection(a.neg_pos))
@@ -245,35 +255,49 @@ def clauseListToDictList(act,clauses):
 		for p in caux.getPossibleBindings(pos,axis=1):
 			for p1 in caux.getPossibleBindings(c):
 				aux = p1
+
 				for k,v in p.items():
 					if k not in aux:
 						aux[k] = v
+
 				possibilities.append(aux)
 
 		for p in possibilities:
 			for k,v in p.items():
 				k = k.replace("?","")
+
 				if k not in bindings:
 					bindings[k] = v
+
 				else:
 					if v != bindings[k]:
 						i = 0
+
 						while True:
 							newKey = k+str(i)
+							
 							if newKey in bindings and v == bindings[newKey]:
 								steps["distinct"].append((k,newKey))
 								break
+
 							if newKey not in bindings:
 								bindings[newKey] = v
 								steps["distinct"].append((k,newKey))
+								break
 
+							i+=1
+
+		#-------------
+		# Hardcoded
 		if d["name"] == "crop":
 			for k,v in bindings.items():
 				if v == possibilities[0]["?obj"]:
 					n = k
+					steps["distinct"].append(("obj",k))
 					del_pars.append(k)
 		else:
 			n = "img"
+		#-------------
 
 		steps["return_name"] = steps["return_name"][1:] + [n]
 
@@ -290,6 +314,9 @@ def clauseListToDictList(act,clauses):
 	return dDict
 
 if __name__ == "__main__":
+	from act import ActionMaker
+	a = ActionMaker()
+
 	c1 = Clause(
 		"crop",
 		"at ?coord ?obj",
@@ -307,15 +334,12 @@ if __name__ == "__main__":
 		""
 	)
 
-	state = toSet("at 123 dog and at 321 cat and have img")
-	#for c in c1.ground(target):
-	#	print str(c[0]), str(c[1])
 
-	#print c1.applicable(state)
+	state = toSet("at 123 dog and at 321 cat and have img")
+
 	plan = getPlan(state, [c1,c2], toSet("at 321 dog and at 123 cat"), set([]))
 	if plan[0]:
-		from act import ActionMaker
 		plan = plan[1]
-		print (clauseListToDictList(ActionMaker(),plan))
+		print (clauseListToDictList(a,plan))
 	else:
 		print("Failed")
