@@ -88,6 +88,8 @@ class cGUI:
 					self.send(custom_msg=m)
 			elif msg == "None":
 				self.send(custom_msg="Sorry, i couldn't do that")
+			elif msg is None:
+				self.open_img(self.image, False)
 			else:
 				if type(msg) is list:
 					self.save(msg[0])
@@ -107,18 +109,18 @@ class cGUI:
 		if len(msg) == 0:
 			return
 
-		self.entry_field.delete(0, 'end')
-
 		if msg == "{quit}":
 			self.top.quit()
 
 		self.msg_list.insert(END,msg)
 
 		if custom_msg is None:
+			self.entry_field.delete(0, 'end')
 			self.pending.append(msg)
 		else:
 			self.msg_list.itemconfig(END, {'fg': 'blue','bg': 'gray'})
 
+		self.msg_list.yview(END)                                  	#Set the scrollbar to the end of the listbox
 		self.msg_list.pack()
 
 	def getPendingMessages(self):
@@ -289,6 +291,8 @@ def getMessages(gui,send,act):
 				del pending[0]
 				if "yes" in line or "yeah" in line or "sure" in line:
 					send.put([r])
+				else:
+					send.put(None)
 				send.put("Ok")
 			elif len(s) == 2 and pending_line is None:
 				send.put("I failed you.")

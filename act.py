@@ -1,6 +1,6 @@
 from PIL import Image
 import darknet.darknet as dnet
-import sys
+import os
 
 def crop(img,coord):
 	return img.crop(coord)
@@ -61,6 +61,13 @@ class ActionMaker():
 		print "Loading Network..."
 		#self.net = dnet.getNet()
 		self.meta = dnet.getMeta()
+
+		try:
+			os.mkdir(".learned")
+		except OSError:
+			if "a.json" in os.listdir(".learned"):
+				with open(".learned/a.json","r") as infile:
+					self.learned_actions = eval(infile.read())
 
 
 	def joinDicts(self, d1,d2, distinct=[],return_name=["img","img"]):
@@ -173,6 +180,10 @@ class ActionMaker():
 
 		if found:
 			self.learned_actions[aName] = solve.clauseListToDictList(self,plan)
+
+			with open(".learned/a.json","w") as outfile:
+				outfile.write(str(self.learned_actions))
+
 			return self.execute(line.replace("noop",aName), img,imgpath,det=det)
 
 		return None
