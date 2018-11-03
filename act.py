@@ -59,7 +59,7 @@ class ActionMaker():
 		self.learned_contracts = []
 
 		print "Loading Network..."
-		#self.net = dnet.getNet()
+		self.net = dnet.getNet()
 		self.meta = dnet.getMeta()
 
 		try:
