@@ -194,13 +194,18 @@ def getMeta():
     return load_meta("cfg/coco.data")
 
 if __name__ == "__main__":
-    img = "data/person.jpg"
-    net = load_net("cfg/yolov3.cfg", "cfg/yolo.weights", 0)
-    meta = load_meta("cfg/coco.data")
-    r = detectBB(net, meta, img)
-    print(r)
+    img = "/tmp/a.jpeg"
+    # from PIL import Image
+    # im = Image.open(img)
+    # im.show()
+    # net = load_net("cfg/yolov3.cfg", "cfg/yolo.weights", 0)
+    # meta = load_meta("cfg/coco.data")
+    # r = detectBB(net, meta, img)
+    # print(r)
+    with open("/tmp/a.dat","r") as infile:
+        r = eval(infile.read())
 
-    #drawBB(img,r)
-    with open("example_person_dets.dat","w") as outfile:
-        outfile.write(str(r))
+    drawBB(img,r)
+    # with open("/tmp/a.dat","w") as outfile:
+    #     outfile.write(str(r))
 

@@ -287,17 +287,15 @@ def clauseListToDictList(act,clauses):
 
 							i+=1
 
-		#-------------
-		# Hardcoded
-		if d["name"] == "crop":
+		ret = "?"+d["return"]
+		n = d["return"]
+		if ret in possibilities[0]:
 			for k,v in bindings.items():
-				if v == possibilities[0]["?obj"]:
+				if v == possibilities[0][ret]:
 					n = k
-					steps["distinct"].append(("obj",k))
-					del_pars.append(k)
-		else:
-			n = "img"
-		#-------------
+					steps["distinct"].append((n,k))
+					del_pars.append(n)
+					break
 
 		steps["return_name"] = steps["return_name"][1:] + [n]
 

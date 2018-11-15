@@ -15,7 +15,8 @@ def cropDict():
 	return {"step":"return = crop(img___,coord___)",
 			"contract":cropContract(),
 			"par":"img,coord",
-			"name":"crop"}
+			"name":"crop",
+			"return":"obj"}
 
 def paste(img,coord,obj):
 	size = (coord[2]-coord[0], coord[3]-coord[1])
@@ -38,7 +39,8 @@ def pasteDict():
 	return {"step":"return = paste(img___,coord___,obj___)",
 			"contract":pasteContract(),
 			"par":"img,coord,obj",
-			"name":"paste"}
+			"name":"paste",
+			"return":"img"}
 
 class ActionMaker():
 	def __init__(self,known_actions={"crop" : cropDict(), "paste" : pasteDict()}, known_functs = {"crop" : crop, "paste" : paste}):
@@ -53,14 +55,11 @@ class ActionMaker():
 								# 				"pre":"(at ?coord1 ?obj1) and (at ?coord2 ?obj2)",
 								# 				"pos":"(at ?coord1 ?obj2) and (at ?coord2 ?obj2)" 
 								# 			},
-								# 	"par":"img,coord1,coord2"
+								# 	"par":"img,coord1,coord2",
+								#	"return":"img"
 								# 	}
 								# }
 		self.learned_contracts = []
-
-		print "Loading Network..."
-		self.net = dnet.getNet()
-		self.meta = dnet.getMeta()
 
 		try:
 			os.mkdir(".learned")
@@ -70,7 +69,7 @@ class ActionMaker():
 					self.learned_actions = eval(infile.read())
 
 
-	def joinDicts(self, d1,d2, distinct=[],return_name=["img","img"]):
+	def joinDicts(self, d1,d2, distinct=[],return_name=[None,None]):
 		d1["step"] = d1["step"].replace("return", return_name[0])
 		d2["step"] = d2["step"].replace("return", return_name[1])
 
@@ -143,7 +142,8 @@ class ActionMaker():
 			"step" : functs,
 			"contract" : contracts,
 			"par" : pars,
-			"name" : "custom"
+			"name" : "custom",
+			"return" : d2["return"]
 		}
 
 	def toFunction(self,op):
@@ -155,7 +155,8 @@ class ActionMaker():
 			except:
 				return None
 
-	def createNew(self,line,goal,img,imgpath,aName,det=None):
+	# def createNew(self,line,goal,img,imgpath,aName,det=None):
+	def createNew(self,line,s0,goal,args):
 		import solve
 
 		clauses = []
@@ -167,49 +168,37 @@ class ActionMaker():
 
 		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
 
-		if det is None:
-			det = self.mkdetection(imgpath)
-
-		asLogic = set([])
-		for k,coord in det.items():
-			asLogic.add("at {} {}".format(str(coord).replace(" ",""),k))
-			goal = goal.replace("?"+k, str(coord).replace(" ",""))
+		goal = args[1]["formatGoal"].formatGoal(goal)
 		target = solve.Clause("goal",goal,"")
 
-		found,plan = solve.getPlan(asLogic,clauses,target.pos_pre,target.neg_pre)
+		found,plan = solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
 
 		if found:
+			aName = line[:line.index('_')]
 			self.learned_actions[aName] = solve.clauseListToDictList(self,plan)
 
 			with open(".learned/a.json","w") as outfile:
 				outfile.write(str(self.learned_actions))
-
-			return self.execute(line.replace("noop",aName), img,imgpath,det=det)
+			#add it to the agent's list
+			# return self.execute(line.replace("noop",aName), img,imgpath,det=det)
+			return self.execute(line, args)
 
 		return None
 
-	def execute(self,line,img,imgpath,det=None):
-		args = line.split("___")
-		command = args[0]
-		del args[0]
+	def execute(self,line,args):
+		pars = line.split("___")
+		command = pars[0]
+
+		fixed, args = args
+			#	args -> derivated from user speech
+			#	fixed -> through other means, e.g., a GUI
+		
+		args = fixed + [y for p in pars[1:] for x,y in args.items() if x==p]
 		
 		fdict = self.toFunction(command)
 
 		if fdict is None:
 			return None
-
-		if det is None:
-			det = self.mkdetection(imgpath)
-
-		assert det is not None
-
-		for i,arg in enumerate(args):
-			if arg in det:
-				args[i] = det[arg]
-			else:
-				args[i] = eval(arg)
-
-		args = [img]+args
 
 		return self.runDict(fdict,args)
 
@@ -219,10 +208,7 @@ class ActionMaker():
 
 		var = {}
 
-		for i in range(len(par)):
-			label = pars[i]
-			val = par[i]
-
+		for label,val in zip(pars,par):
 			var[label] = val
 
 		assign = None
@@ -241,27 +227,24 @@ class ActionMaker():
 
 		return var[assign]
 
-	def mkdetection(self, imgpath):
-		return dnet.detectBB(self.net, self.meta, imgpath)
-
 
 if __name__ == "__main__":
-		actor = ActionMaker()
+	actor = ActionMaker()
 
-		img = "data/person.jpg"
+	img = "data/person.jpg"
 
-		im = Image.open(img)
+	im = Image.open(img)
 
-		try:
-			with open("example_person_dets.dat","r") as infile:
-				dets = eval(infile.read())
-		except:
-			dets = None
+	try:
+		with open("example_person_dets.dat","r") as infile:
+			dets = eval(infile.read())
+	except:
+		dets = None
 
-		#res = actor.execute("crop___dog",im,img)
-		res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap",dets)
-		# coord = [0,0, im.size[0],im.size[1]]
-		# res = actor.execute("crop___"+str(coord),im)
+	#res = actor.execute("crop___dog",im,img)
+	res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap",dets)
+	# coord = [0,0, im.size[0],im.size[1]]
+	# res = actor.execute("crop___"+str(coord),im)
 
-		if res!=None:
-			res.show()
+	if res!=None:
+		res.show()

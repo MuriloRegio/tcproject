@@ -14,6 +14,8 @@ import thread
 import time
 import Queue
 
+import darknet.darknet as dnet
+
 
 class cGUI:
 	def __init__(self,queue):
@@ -78,6 +80,10 @@ class cGUI:
 		self.top.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
 		self.top.after(100, self.process_queue)
+
+		print "Loading Network..."
+		self.net = dnet.getNet()
+		self.meta = dnet.getMeta()
 
 	def process_queue(self):
 		try:
@@ -144,6 +150,12 @@ class cGUI:
 			return
 
 		pil_image = Image.open(self.file)
+		
+		if "data/person.jpg" in self.file:
+			with open("example_person_dets.dat",'r') as infile:
+				self.dets = eval(infile.read())
+		else:
+			self.dets = dnet.detectBB(self.net, self.meta, self.file)
 
 		self.open_img(pil_image)
 
@@ -216,101 +228,49 @@ def getThisCoords(gui):
 	#		   xmin,    ymin,    xmax,    ymax
 	return (op(0,0), op(0,1), op(1,0), op(1,1))
 
-def getMessages(gui,send,act):
-	import agent
-	agt = agent.bot()
+class Goalfy:
+	def __init__(self, dets):
+		self.dets = dets
+
+	def formatGoal(self,goal):
+		for k,coord in self.dets.items():
+			goal = goal.replace("?"+k, str(coord).replace(" ",""))
+		return goal
+
+def getMessages(gui,send):
+	from agent import bot
+	from copy import copy
+	agt = bot(send)
 	pending = gui.getPendingMessages()
-	pending_line = None
-	name = None
 
 	while 1:
 		time.sleep(1) # in seconds
 		if len(pending)>0:
+			args = copy(gui.dets)
+			args["formatGoal"] = Goalfy(gui.dets) # a class that implements a method "formatGoal" with arity 1
+
+			fixed = [gui.unresized_image]
+
+			state = set([])
+			for k,coord in gui.dets.items():
+				state.add("at {} {}".format(str(coord).replace(" ",""),k))
+
 			line = pending[0]
 			del pending[0]
 
-			s = agt.getAnswer(line)
-			while ' & ' in s:
-				splits = s.split(' & ')
-				answer = agt.getAnswer(splits[1])
-				s = "{} and {}".format(splits[0],answer)
-
-			if len(s)==0:
-				s = agt.getAnswer("_-_-DEU RUIM-_-_")
-
-			s = s.split("|")
-
-			send.put(s[-1])
-			r = None
-			if len(s) == 2:
-				command  = s[0]
-
-				if '?' not in command:
-					command = command.replace(" and ","___").replace(" ","")
-				
-				if "det" == command:
-					gui.dets = act.mkdetections(gui.file)
-					
-				elif "add_det" in command:
-					if gui.dets is None:
-						gui.dets = act.mkdetections(gui.file)
-
-					label = command.split("___")[1]
-
-					if label in gui.dets:
-						send.put("Label already in use!")
-						continue
-
-					gui.dets[label] = getThisCoords(gui)
-
-				elif pending_line is None and '?' not in command:
-					command = command.replace(" ","")
-					if "___this" in command:
-						command = command.replace("___this","___{}".format(str(getThisCoords(gui))))
-
-					#			    command,              image, file path, stored detections
-					r = act.execute(command,gui.unresized_image,  gui.file, gui.dets)
-
-					if r is None:
-						i = command.index('_')
-						name = command[:i]
-						pending_line = "noop"+command[i:]
-
-				elif '?' in command:
-					#			           command,   goal,              image, file path, name of the new action, stored detections
-					r = act.createNew(pending_line,command,gui.unresized_image,  gui.file, 					 name, gui.dets)
-					pending_line = None
-					name = None
-			
-			if r is not None:
-				send.put(r)
-				send.put("Save changes?")
-				while len(pending) == 0:
-					continue
-				line = pending[0]
-				del pending[0]
-				if "yes" in line or "yeah" in line or "sure" in line:
-					send.put([r])
-				else:
-					send.put(None)
-				send.put("Ok")
-			elif len(s) == 2 and pending_line is None:
-				send.put("I failed you.")
-
-
+			agt.proccessAnswer(line,state,(fixed,args))
+			#	(fixed,args) ::
+			#	args -> derivated from user speech
+			#	fixed -> through other means, e.g., a GUI
 
 
 if __name__ == "__main__":
-	import act
-
-	a = act.ActionMaker()
-
 	queue = Queue.Queue()
 
 	gui = cGUI(queue)
 	gui.send(custom_msg = "Hello World!")
 
-	thread.start_new_thread(getMessages,(gui,queue,a))
+	thread.start_new_thread(getMessages,(gui,queue))
 
 
 	gui.mGui.mainloop()
