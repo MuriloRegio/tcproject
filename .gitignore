@@ -2,3 +2,5 @@
 *.weights
 temp.jpg
 *.json
+*.o
+*.so
