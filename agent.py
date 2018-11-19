@@ -39,7 +39,7 @@ class bot:
 
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")
-			self.channel.put(s[-1])
+			self.channel.put(s)
 			return
 
 		s = s.split("|")

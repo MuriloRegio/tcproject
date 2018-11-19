@@ -155,7 +155,6 @@ class ActionMaker():
 			except:
 				return None
 
-	# def createNew(self,line,goal,img,imgpath,aName,det=None):
 	def createNew(self,line,s0,goal,args):
 		import solve
 
@@ -176,6 +175,7 @@ class ActionMaker():
 		if found:
 			aName = line[:line.index('_')]
 			self.learned_actions[aName] = solve.clauseListToDictList(self,plan)
+			self.learned_actions[aName]["name"] = aName
 
 			with open(".learned/a.json","w") as outfile:
 				outfile.write(str(self.learned_actions))
