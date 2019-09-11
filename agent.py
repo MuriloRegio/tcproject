@@ -6,7 +6,7 @@ import apiai
 import dialogflow_v2 as dialogflow
 
 class bot:
-	def __init__(self,communicational_channel):
+	def __init__(self,communicational_channel, back_agent = None):
 		import getpass
 		import random
 		CLIENT_ACCESS_TOKEN = 'b58c216c5ad84793b84657f5e544e6b8'
@@ -19,14 +19,19 @@ class bot:
 		self.name = None
 
 		from act import ActionMaker
-		self.agent = ActionMaker()
+		self.agent = back_agent
+		if back_agent is None:
+			self.agent = ActionMaker()
+			
 		self.channel = communicational_channel
 
 	def getAnswer(self,query):
 		request = self.ai.text_request()
 		request.session_id = self.id
 		request.query = query
-		self.last_response = eval(request.getresponse().read().replace("false","False").replace("true","True"))
+		response = request.getresponse().read().decode('unicode_escape')
+		# print (response,type(response))
+		self.last_response = eval(response.replace("false","False").replace("true","True"))
 		return self.last_response["result"]["fulfillment"]["speech"]
 
 	def proccessAnswer(self,line,state,args):
@@ -37,6 +42,8 @@ class bot:
 			answer = self.getAnswer(splits[1])
 			s = "{} &and& {}".format(splits[0],answer)
 
+		print (s)
+		
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")
 			self.channel.put(s)
@@ -93,12 +100,15 @@ class bot:
 			self.channel.put("I failed you.")
 
 if __name__ == '__main__':
-	b = bot()
+	import queue
+	channel = queue.Queue()
+
+	b = bot(channel)
 
 	s = b.getAnswer("can you swap the dog and the cat?")
 	if '|' in s:
 		command, response = s.split("|")
-		print response
-		print command
+		print (response)
+		print (command)
 	else:
-		print s
+		print (s)

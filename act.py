@@ -1,5 +1,5 @@
+from OLD import *
 from PIL import Image
-import darknet.darknet as dnet
 import os
 
 def crop(img,coord):
@@ -70,8 +70,11 @@ class ActionMaker():
 
 
 	def joinDicts(self, d1,d2, distinct=[],return_name=[None,None]):
-		d1["step"] = d1["step"].replace("return", return_name[0])
-		d2["step"] = d2["step"].replace("return", return_name[1])
+		if return_name[0] is not None:
+			d1["step"] = d1["step"].replace("return", return_name[0])
+
+		if return_name[1] is not None:
+			d2["step"] = d2["step"].replace("return", return_name[1])
 
 		getSplits = lambda x, k : [y.split("=")[k] for y in x.replace(" ","").split(";")]
 
@@ -94,19 +97,22 @@ class ActionMaker():
 		pars = ','.join(pars)
 
 
-		assign1 = getSplits(f1,0)
-		assign2 = getSplits(f2,0)
+		# assign2 = getSplits(f2,0)
+		# assign1 = getSplits(f1,0)
 
-		calls1 = getSplits(f1,1)
-		calls2 = getSplits(f2,1)
+		# calls1 = getSplits(f1,1)
+		# calls2 = getSplits(f2,1)
 
-		join = lambda l1,l2: map(lambda (x, y): x+"="+y,zip(l1,l2))
+		# join = lambda l1,l2: map(lambda x_y: x_y[0]+"="+x_y[1],zip(l1,l2))
 
-		functs = ';'.join([';'.join(join(assign1,calls1)),';'.join(join(assign2,calls2))])
+		# functs = ';'.join([';'.join(join(assign1,calls1)),';'.join(join(assign2,calls2))])
+		functs = ';'.join([f1,f2])
 
 		#arruma contracts
 		d1_cont = {"pre":set(d1["contract"]["pre"].split(" and ")),"pos":set(d1["contract"]["pos"].split(" and "))}
 		d2_cont = {"pre":set(d2["contract"]["pre"].split(" and ")),"pos":set(d2["contract"]["pos"].split(" and "))}
+
+		tmp_cont = {"pre":set([]),"pos":set([])}
 
 		for t in d2_cont:
 			for i,c in enumerate(d2_cont[t]):
@@ -118,15 +124,16 @@ class ActionMaker():
 						if s == elem:
 							splits[j+1] = '?'+newName
 
-				d2_cont[t].remove(c)
-				d2_cont[t].add(' '.join(splits))
+				# d2_cont[t].remove(c)
+				# d2_cont[t].add(' '.join(splits))
+				tmp_cont[t].add(' '.join(splits))
+		d2_cont = tmp_cont
 
 		for c in d2_cont["pre"]:
 			if c in d1_cont["pos"]:
 				d1_cont["pos"].remove(c)
 			else:
 				d1_cont["pre"].add(c)
-
 
 		for c in d2_cont["pos"]:
 			if len(c) > 5 and c[:5] == "not ":
@@ -138,13 +145,17 @@ class ActionMaker():
 		contracts["pre"] = ' and '.join(d1_cont["pre"])
 		contracts["pos"] = ' and '.join(d1_cont["pos"])
 
-		return {
+		ret_d = {
 			"step" : functs,
 			"contract" : contracts,
 			"par" : pars,
 			"name" : "custom",
-			"return" : d2["return"]
 		}
+
+		if 'return' in d2:
+			ret_d["return"] = d2["return"]
+
+		return ret_d
 
 	def toFunction(self,op):
 		try:
@@ -156,21 +167,9 @@ class ActionMaker():
 				return None
 
 	def createNew(self,line,s0,goal,args):
-		import solve
-
-		clauses = []
-
-		l_append = lambda dict : map(lambda (f, d) : clauses.append(solve.Clause(f,d["contract"]["pre"],d["contract"]["pos"])), dict.items())
-		
-		l_append(self.known_actions)
-		l_append(self.learned_actions)
-
-		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
-
 		goal = args[1]["formatGoal"].formatGoal(goal)
-		target = solve.Clause("goal",goal,"")
 
-		found,plan = solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
+		found,plan = self.findPlan(s0,goal)
 
 		if found:
 			aName = line[:line.index('_')]
@@ -185,25 +184,95 @@ class ActionMaker():
 
 		return None
 
+	def findPlan(self,s0,goal):
+		import solve
+		target = solve.Clause("goal",goal,"")
+
+		clauses = []
+
+		l_append = lambda dict : map(lambda f_d : clauses.append(solve.Clause(f_d,f_d[1]["contract"]["pre"],f_d[1]["contract"]["pos"])), dict.items())
+		
+		l_append(self.known_actions)
+		l_append(self.learned_actions)
+
+		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
+
+		return solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
+
 	def execute(self,line,args):
+	# def execute(self,line,env):
 		pars = line.split("___")
 		command = pars[0]
-
-		fixed, args = args
-			#	args -> derivated from user speech
-			#	fixed -> through other means, e.g., a GUI
-		
-		args = fixed + [y for p in pars[1:] for x,y in args.items() if x==p]
 		
 		fdict = self.toFunction(command)
 
 		if fdict is None:
 			return None
 
+		fixed, args = args
+			#	args -> derivated from user speech
+			#	fixed -> through other means, e.g., a GUI
+		
+		args = fixed + [y for p in pars[1:] for x,y in args.items() if x==p]
+
+		# args = [env(label) for label in fdict["par"].split(',')]
+
 		return self.runDict(fdict,args)
+
+	# def execute(self,line,env):
+	# 	pars = line.split("___")
+	# 	command = pars[0]
+		
+	# 	fdict = self.toFunction(command)
+
+	# 	if fdict is None:
+	# 		return None
+
+	# 	return self.runDict(fdict, env, pars[1:])
+
+	def simulate(self,state,fdict):
+		steps = fdict["steps"].split(';')
+		getFunc = lambda x : x.split('(')[0]
+
+		for step in steps:
+			comm = getFunc(step)
+			d = self.toFunction(comm)
+
+			g = apply_bounds(state, d["contract"])
+
+			if applicable(state, g["pre"]):
+				state = apply(state, g["pos"])
+			else:
+				return False
+		return True
+		
+	def getBindings(self, var, env, pars):
+		var_bindings = {}
+		i = 0
+		for label in var:
+			if label in env:
+				var_bindings[label] = env(label)
+			else:
+				var_bindings[label] = env(pars[i])
+				i+=1
+		return var_bindings
 
 	def runDict(self,funcDict,par):
 		pars = funcDict["par"].split(",")
+
+		# var = {}
+		# i = 0
+		# for line in funcDict["step"].replace(" ","").split(";"):
+		# 	assign, command = line.split("=")
+			
+		# 	f = command.split('(')[0]
+		#	fdict = self.toFunction(command)
+
+		# 	if not check(fdict["contract"]["pre"], env): # -- format atual state to "s0" --
+		# 		return self.createNew(line, s0, fdict["contract"]["pos"], env)
+		# 	
+		# 	var[assign] = eval(command)
+
 		assert len(par) == len(pars)
 
 		var = {}
@@ -242,7 +311,7 @@ if __name__ == "__main__":
 		dets = None
 
 	#res = actor.execute("crop___dog",im,img)
-	res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap",dets)
+	# res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap",dets)
 	# coord = [0,0, im.size[0],im.size[1]]
 	# res = actor.execute("crop___"+str(coord),im)
 
