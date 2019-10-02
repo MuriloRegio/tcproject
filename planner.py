@@ -24,13 +24,13 @@ def h(actions, initial_state, positive_goals, negative_goals):
 
 		for a in actions:
 			a.state = state
-			for grounded,_ in a.ground(state,axis=1):
+			for grounded in a.ground(state,axis=1):
 				# subgrounds = grounded.ground(joined_goals,axis=1)
 				subgrounds = grounded.ground(target)
 				if len(subgrounds) == 0:
 					new_state = new_state.union(grounded.pos_pos)
 				else:
-					for g,_ in subgrounds:
+					for g in subgrounds:
 						new_state = new_state.union(g.pos_pos)
 
 		if len(state) == len(new_state):
@@ -56,31 +56,35 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 		)
 
 	states.put((0,0,initial_state,[]))
-
-	possible_actions = []
+	print (target)
 
 	while not states.empty():
 		cost, count, state, plan = states.get()
 
+		# if any(["has R" in x for x in state]):
+		# 	print (state)
+
 		if target.applicable(state):
-			print ('LEAVING FROM SUCCESS')
+			# print ('LEAVING FROM SUCCESS')
 			return (True,plan)
 
+		possible_actions = []
 		for a in actions:
 			a.state = state
-			for grounded,_ in a.ground(state, axis=1):
+			for grounded in a.ground(state, axis=1):
 				if grounded not in possible_actions:
 					possible_actions.append(grounded)
 
-					for new_grounded,_ in grounded.ground(target):
+					for new_grounded in grounded.ground(target):
 						if new_grounded not in possible_actions: 
 							possible_actions.append(new_grounded)
+
 		# for a in possible_actions:
 		# 	print ('============')
 		# 	print (a)
 		# 	print ('============')
 
-		print ("Found {} possible actions".format(len(filter(l_applicable,possible_actions))))
+		# print ("Found {} possible actions".format(len(filter(l_applicable,possible_actions))))
 
 		#Take a look at applicable
 		for a in filter(l_applicable,possible_actions):
@@ -98,7 +102,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			key = frozenset(new_state)
 
 			if key in explored:
-				print ('Already explored!')
+				# print ('Already explored!')
 				continue
 
 			# print (new_state)
@@ -124,7 +128,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 		print('cycle done', states.qsize(), len(explored), sep='\t\t')
 		# input('')
 
-	print ('LEAVING FROM FAILURE')
+	# print ('LEAVING FROM FAILURE')
 	#add case of failure, what was the closest it got
 	return (False,[[]])
 
@@ -135,7 +139,8 @@ class Planner:
 
 	def getPlan(self,initial_state, actions, positive_goals, negative_goals):
 		# print ([type(x) for x in [initial_state, actions, positive_goals, negative_goals]])
-		setfy = lambda x : toSet(applyBindings(x,{},actions[0].functions,initial_state))
+		# setfy = lambda x : x if type(x) is set else toSet(applyBindings(x,{},actions[0].functions,initial_state))
+		setfy = lambda x : x if type(x) is set else toSet(x,{"bindings":{},"functions":actions[0].functions,"state":initial_state})
 		eval_initial_state = setfy(initial_state)
 		eval_positive_goals = setfy(positive_goals)
 		eval_negative_goals = setfy(negative_goals)
@@ -148,15 +153,15 @@ if __name__ == "__main__":
 
 	from EnvManager import *
 
-	env = {"self" : [1,1], "walls" : 	[[0,0],[0,1],[0,2],
-										 [1,0]		,[1,2],
-										 [2,0]		,[2,2],
-										 [3,0]		,[3,2],
-										 [4,0]		,[4,2],
-										 [5,0]		,[5,2],
-										 [6,0]		,[6,2],
-										 [7,0]		,[7,2],
-										 [8,0],[8,1],[8,2]],
+	env = {"self" : [1,1], "walls" : 	[(0,0),(0,1),(0,2),
+										 (1,0)		,(1,2),
+										 (2,0)		,(2,2),
+										 (3,0)		,(3,2),
+										 (4,0)		,(4,2),
+										 (5,0)		,(5,2),
+										 (6,0)		,(6,2),
+										 (7,0)		,(7,2),
+										 (8,0),(8,1),(8,2)],
 			"objects":{"box" : (7,1)}
 		}
 

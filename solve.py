@@ -174,7 +174,7 @@ class Clause:
 				grounded_neg_pre = set(grounded_neg_pre)
 				grounded_pos_pos = set(grounded_pos_pos)
 				grounded_neg_pos = set(grounded_neg_pos)
-				found.append((Clause(self.name + " grounded",(grounded_pos_pre,grounded_neg_pre),(grounded_pos_pos,grounded_neg_pos),functions=self.functions,state=self.state),self))
+				found.append(Clause(self.name + " grounded",(grounded_pos_pre,grounded_neg_pre),(grounded_pos_pos,grounded_neg_pos),functions=self.functions,state=self.state))
 
 		return found
 
@@ -206,9 +206,12 @@ def applyBindings(string, bindings, functions, state):
 	# return ' '.join(tokens).replace("-!-","")
 	return ' '.join(tmp)
 
-def toSet(str):
+def toSet(str, evaluator=None):
 	slots = lambda l : [x for x in l.split(" and ")]
 	clear = lambda l : set(map(lambda x : x.strip(),l))
+
+	if evaluator is not None:
+		str = applyBindings(str,evaluator["bindings"],evaluator["functions"],evaluator["state"])
 
 	return clear(slots(str))
 
@@ -422,16 +425,39 @@ def clauseListToDictList(act,clauses):
 	for p in reversed(del_pars): 
 		dDict["par"] = dDict["par"].replace(",{}".format(p),"")
 
-	### Check to remove conditions that doesn't appear on the parameters
+	### Check to remove conditions that don't appear on the parameters
+	for contType in dDict["contract"]:
+		contract   = dDict["contract"][contType]
+		conditions = contract.split(" and ")
+		for i in range(len(conditions),0,-1):
+			# i = (i+1)*-1
+			i-=1
+
+			# print(conditions[i], conditions, i)
+			vars = conditions[i].split(' ')[1:]
+			d = []
+			for par in dDict["par"].split(","):
+				tmp = []
+				for var in vars:
+					tmp.append(par not in var)
+				d.append(all(tmp) and len(vars))
+				# d.append(any(tmp))
+
+			if all(d):
+				del conditions[i]
+
+		dDict["contract"][contType] = " and ".join(conditions)
+
 
 	return dDict
 
-def dict2clause(aDict,functions=None):
+def dict2clause(aDict,functions=None,state=None):
 	return Clause(
 		aDict["name"],
 		aDict["contract"]["pre"],
 		aDict["contract"]["pos"],
-		functions
+		functions,
+		state
 	)
 
 if __name__ == "__main__":
@@ -482,8 +508,8 @@ if __name__ == "__main__":
 	plan = getPlan(state, actions, target, "")
 	if plan[0]:
 		plan = plan[1]
-		for p in plan:
-			print (p.name)
+		# for p in plan:
+		# 	print (p.name)
 		print (clauseListToDictList(a,plan))
 	else:
 		print("Failed")

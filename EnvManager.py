@@ -22,14 +22,14 @@ def read_description(file, walls = '+-|',objs = "RGBCMY",agt = "A"):
 #----------------------------------
 
 def free(coord, env):
-	tmp =  not (list(coord) in env["walls"] or \
+	tmp =  not (tuple(coord) in env["walls"] or \
 			tuple(coord) in [v for _,v in env["objects"].items()])
 	# print (coord, tmp, list(coord) in env["walls"])
 	return tmp
 
 def state_free(coord, env, state):
-	# print(env)
-	if list(coord) in env["walls"]:
+	# print(coord, list(coord) in env["walls"])
+	if tuple(coord) in env["walls"]:
 		return False
 
 	for exp in state:
@@ -126,6 +126,7 @@ def dropDict():
 #================================================================================
 #Step Action
 def step(env, direction):
+	print (type(env))
 	env["facing"] = direction
 	if not free(front(env), env):
 		raise ValueError("Path is blocked")
@@ -144,11 +145,23 @@ def Contract_step(direction):
 
 def stepDict(direction):
 	return {
-				"step":"step(env___,'{}')".format(direction),
+				"step":"step_{}(env___)".format(direction),
 			"contract":Contract_step(direction),
 				 "par":"env",
 				"name":"step_{}".format(direction),
 			}
+
+def step_up(env):
+	return step(env,'up')
+
+def step_left(env):
+	return step(env,'left')
+
+def step_right(env):
+	return step(env,'right')
+
+def step_down(env):
+	return step(env,'down')
 #================================================================================
 
 
