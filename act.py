@@ -223,13 +223,14 @@ class ActionMaker():
 		# 	#	fixed -> through other means, e.g., a GUI
 		
 		env = args['env']
+		statefier = args['statefier']
 		# print (args)
 		args = [y for p in fdict['par'].split(',') for x,y in args.items() if x==p]\
 			 + [y for p in pars[1:] for x,y in args.items() if x==p]
 
 		# args = [env(label) for label in fdict["par"].split(',')]
 
-		return self.runDict(fdict,args,env)
+		return self.runDict(fdict,args,env,statefier)
 
 	# def execute(self,line,env):
 	# 	pars = line.split("___")
@@ -271,23 +272,12 @@ class ActionMaker():
 				input('ytho')
 				return False
 		return True
-		
-	def getBindings(self, var, env, pars):
-		var_bindings = {}
-		i = 0
-		for label in var:
-			if label in env:
-				var_bindings[label] = env(label)
-			else:
-				var_bindings[label] = env(pars[i])
-				i+=1
-		return var_bindings
 
-	def runDict(self,funcDict,par,env):
+	def runDict(self,funcDict,par,env,statefier):
 		pars = funcDict["par"].split(",")
 
 		assert len(par) == len(pars)
-		print (env.statefy())
+		print (statefier())
 		print (funcDict['step'])
 		input(funcDict["contract"]["pos"])
 
@@ -304,11 +294,11 @@ class ActionMaker():
 			command = line
 
 			print (type(steps), type(par))
-			applicable = self.simulate(env.statefy(), steps[i:])
+			applicable = self.simulate(statefier(), steps[i:])
 
 			if not applicable:
-				found, new_plan = self.findPlan(env.statefy(), funcDict["contract"]["pos"])
-				return found if not found else self.runDict(plan, par, env)
+				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"])
+				return found if not found else self.runDict(plan, par, env, statefier)
 
 			if '=' in line:
 				assign, command = line.split("=")
@@ -366,7 +356,8 @@ if __name__ == "__main__":
 		)
 
 	e.formatGoal = lambda x : x
-	a.createNew("noop___red_box", state, "has R", {"env":e, "formatGoal": e, "red_box":"R"})
+	a.createNew("noop___red_box", state, "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
+	
 
 	# res = a.learned_actions["noop"]
 
