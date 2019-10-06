@@ -1,4 +1,4 @@
-import os.path
+import os
 import sys
 
 import apiai
@@ -13,7 +13,7 @@ class bot:
 		self.ai = apiai.ApiAI(CLIENT_ACCESS_TOKEN)
 		self.last_response = None
 		self.token = CLIENT_ACCESS_TOKEN
-		self.id = "<{},{}>".format(getpass.getuser(),random.randint(0,10000))
+		self.id = "<{},{}>".format(os.getlogin(),random.randint(0,10000))
 
 		self.pending_line = None
 		self.name = None
@@ -30,11 +30,11 @@ class bot:
 		request.session_id = self.id
 		request.query = query
 		response = request.getresponse().read().decode('unicode_escape')
-		# print (response,type(response))
+		
 		self.last_response = eval(response.replace("false","False").replace("true","True"))
 		return self.last_response["result"]["fulfillment"]["speech"]
 
-	def proccessAnswer(self,line,state,args):
+	def proccessAnswer(self,line,args):
 		s = self.getAnswer(line)
 
 		while ' & ' in s:
@@ -65,37 +65,23 @@ class bot:
 			
 			if self.last_response["result"]["metadata"]["intentName"] == "Identify unknown":
 				command = command.replace(" and ","___").replace(", ","___").replace(" ","")
-				# command = command.replace(" ","")
-				# if "___this" in command:
-				# 	command = command.replace("___this","___{}".format(str(getThisCoords(gui))))
-
-				#				command,params
 				r = self.agent.execute(command,args)
-				# r = act.execute(command,gui.unresized_image,  gui.file, gui.dets)
 
 				if r is None:
 					self.pending_line = command
 
 			elif self.last_response["result"]["metadata"]["intentName"] == "as Logic":
 				command = command.replace(" and "," ").replace(" &and& ", " and ").replace(",","")
-				#					        command, state,   goal, params
-				r = self.agent.createNew(self.pending_line, state,command, args)
-				# r = act.createNew(self.pending_line,command,gui.unresized_image,  gui.file, 					 self.name, gui.dets)
+				
+				r = self.agent.createNew(self.pending_line, command, args)
+				
 				self.pending_line = None
 				self.name = None
 		
 		if r is not None:
 			self.channel.put(r)
-			# self.channel.put("Save changes?")
-			# while len(pending) == 0:
-			# 	continue
-			# line = pending[0]
-			# del pending[0]
-			# if "yes" in line or "yeah" in line or "sure" in line:
-			# 	self.channel.put([r])
-			# else:
-			# 	self.channel.put(None)
 			self.channel.put("Ok, done")
+
 		elif len(s) == 2 and self.pending_line is None:
 			self.channel.put("I failed you.")
 

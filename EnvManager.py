@@ -126,7 +126,6 @@ def dropDict():
 #================================================================================
 #Step Action
 def step(env, direction):
-	print (type(env))
 	env["facing"] = direction
 	if not free(front(env), env):
 		raise ValueError("Path is blocked")

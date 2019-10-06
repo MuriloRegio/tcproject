@@ -168,8 +168,9 @@ class ActionMaker():
 			except:
 				return None
 
-	def createNew(self,line,s0,goal,args):
+	def createNew(self,line,goal,args):
 		goal = args["formatGoal"].formatGoal(goal)
+		s0   = args["statefier"]()
 
 		found,plan = self.findPlan(s0,goal)
 
@@ -177,7 +178,7 @@ class ActionMaker():
 			aName = line[:line.index('_')]
 			self.learned_actions[aName] = plan
 			self.learned_actions[aName]["name"] = aName
-			print (plan)
+			# print (plan)
 
 			# with open(".learned/a.json","w") as outfile:
 			# 	outfile.write(str(self.learned_actions))
@@ -249,7 +250,7 @@ class ActionMaker():
 		state   = toSet(state, {"bindings":{},"functions":self.logical_functions,"state":state})
 		getFunc = lambda x : x.split('=')[-1].split('(')[0]
 
-		input(len(steps))
+		# input(len(steps))
 
 		for step in steps:
 			comm = getFunc(step)
@@ -262,14 +263,14 @@ class ActionMaker():
 
 			f = 0
 			for p in possibilities:
-				print (p)
+				# print (p)
 				if p.applicable(state):
 					state = p.apply(state)
 					f = 1
 
 			if not f:
-				print (len(possibilities))
-				input('ytho')
+				# print (len(possibilities))
+				# input('ytho')
 				return False
 		return True
 
@@ -277,9 +278,9 @@ class ActionMaker():
 		pars = funcDict["par"].split(",")
 
 		assert len(par) == len(pars)
-		print (statefier())
-		print (funcDict['step'])
-		input(funcDict["contract"]["pos"])
+		# print (statefier())
+		# print (funcDict['step'])
+		# input(funcDict["contract"]["pos"])
 
 		var = {}
 		steps = funcDict["step"].replace(" ","").split(";")
@@ -287,13 +288,13 @@ class ActionMaker():
 		for label,val in zip(pars,par):
 			var[label] = val
 
-		print (len(steps))
+		# print (len(steps))
 
 		for i,line in enumerate(steps):
 			assign  = None
 			command = line
 
-			print (type(steps), type(par))
+			# print (type(steps), type(par))
 			applicable = self.simulate(statefier(), steps[i:])
 
 			if not applicable:
@@ -356,7 +357,7 @@ if __name__ == "__main__":
 		)
 
 	e.formatGoal = lambda x : x
-	a.createNew("noop___red_box", state, "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
+	a.createNew("noop___red_box", "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
 	
 
 	# res = a.learned_actions["noop"]

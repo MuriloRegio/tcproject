@@ -6,6 +6,7 @@ from builtins import filter as FILTER
 map = lambda *pars : list(MAP(*pars))
 zip = lambda *pars : list(ZIP(*pars))
 filter = lambda *pars : list(FILTER(*pars))
+apply = lambda foo,*pars,**kargs : foo(*pars, **kargs)
 
 if __name__ == "__main__":
 	test = [1,2,3,4,5]

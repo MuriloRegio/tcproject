@@ -133,7 +133,8 @@ class env:
 		
 	def run(self, command):
 		def update(*args):
-			l = apply(eval("em."+command),args)
+			# print (args)
+			l = apply(eval("em."+command),*args)
 			if command == "pick":
 				obj, coord = l
 				self.update(coord, 255)
@@ -177,6 +178,20 @@ class env:
 			state += " and current {} {}-self".format(getPos(direction),direction)
 
 		return state
+
+	def formatGoal(self,goal):
+		splits = goal.split(' and ')
+
+		for i,line in enumerate(splits):
+			slots = line.split(" ")
+
+			if slots[0] != 'at':
+				continue
+
+			slots[1]  = self.args[slots[1]]
+			splits[i] = ' '.join(slots)
+
+		return ' and '.join(splits)
 
 	def envQuery(self,arg):
 		if type(arg) is str:
@@ -224,25 +239,49 @@ class env:
 				self.st[x:x+self.img_scale,y:y+self.img_scale] = value
 
 def run(GUI, e):
-	from agent import bot
-	from copy import copy
+	# from EnvManager import *
 	from act import ActionMaker
 
-	a = ActionMaker(
-				known_actions={"pick":em.pickDict(), "drop":em.dropDict(),
-					"go_left":em.stepDict("left"),"go_right":em.stepDict("right"),
-					"go_up":em.stepDict("up"),"go_down":em.stepDict("down")
-				},
-				known_functs={"pick":e.run("pick"),"drop":e.run("drop"),
-					"go_up":lambda x : e.run("step")(x,"up"),
-					"go_down":lambda x : e.run("step")(x,"down"),
-					"go_left":lambda x : e.run("step")(x,"left"),
-					"go_right":lambda x : e.run("step")(x,"right"),
-				}
-			)
+	# e = env()
+	functions = {
+		"free" 	: lambda _state, _env=e.env : lambda x, y=_env, z=_state : em.state_free(x,y,z),
+		"close" : lambda _state : lambda x, y : em.close(x,y),
+		"up"	: lambda _state : lambda x : em.up(x),
+		"down"	: lambda _state : lambda x : em.down(x),
+		"left"	: lambda _state : lambda x : em.left(x),
+		"right"	: lambda _state : lambda x : em.right(x),
+	}
 
+	a = ActionMaker(
+			{
+				"step_down":  em.stepDict('down'), "step_up":    em.stepDict('up'), 
+				"step_right":em.stepDict('right'), "step_left":em.stepDict('left'), 
+				"pick" :            em.pickDict(), "drop":           em.dropDict()
+			},
+			{
+				"step_down"  : e.run("step_down"), 
+				"step_right" : e.run("step_right"), 
+				"step_left"  : e.run("step_left"), 
+				"step_up"    : e.run("step_up"), 
+				"pick"       : e.run("pick"), 
+				"drop"       : e.run("drop"), 
+			},
+			logical_functions = functions
+		)
+
+
+
+	from agent import bot
 	agt = bot(GUI.queue,a)
 	pending = GUI.pending
+
+	e.formatGoal = lambda x : x
+	args = {"env":e.env, "statefier":e.statefy, "formatGoal": e, 
+			"red box":"R", "green box":"G", "blue box":"B", 
+			"room_1":"[3,5]","room_2":"[3,15]","room_3":"[3,25]",
+			"room_4":"[15,5]","room_5":"[15,15]","room_6":"[15,25]",
+			"corridor":"[9,15]"}
+
 
 	while 1:
 		time.sleep(1)
@@ -250,9 +289,17 @@ def run(GUI, e):
 			msg = pending[0]
 			del pending[0]
 
-			# e.run(m)(e)
+			# m = msg.split(' ')
 
-			agt.proccessAnswer(msg,None,e)
+			# e.run(m[0])(*m[1:]+[e.env])
+
+			agt.proccessAnswer(msg,args)
+
+# def test():
+	# while 1:
+	# 	e.run("step_up")(e.env)
+	# 	print ("HELLO THERE")
+
 
 if __name__ == "__main__":
 	e = env()
@@ -260,5 +307,6 @@ if __name__ == "__main__":
 
 	import _thread
 	_thread.start_new_thread(run, tuple([gui, e]))
+	# _thread.start_new_thread(test, tuple([]))
 
 	gui.mGui.mainloop()

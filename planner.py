@@ -125,7 +125,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			new_plan = plan + [a]
 			states.put((new_cost,count,new_state,new_plan))
 		# input('')
-		print('cycle done', states.qsize(), len(explored), sep='\t\t')
+		# print('cycle done', states.qsize(), len(explored), sep='\t\t')
 		# input('')
 
 	# print ('LEAVING FROM FAILURE')
