@@ -218,7 +218,7 @@ class ActionMaker():
 
 		if fdict is None:
 			return None
-
+			
 		# fixed, args = args
 		# 	#	args -> derivated from user speech
 		# 	#	fixed -> through other means, e.g., a GUI
@@ -226,27 +226,54 @@ class ActionMaker():
 		env = args['env']
 		statefier = args['statefier']
 		# print (args)
-		args = [y for p in fdict['par'].split(',') for x,y in args.items() if x==p]\
+		par = [y for p in fdict['par'].split(',') for x,y in args.items() if x==p]\
 			 + [y for p in pars[1:] for x,y in args.items() if x==p]
 
 		# args = [env(label) for label in fdict["par"].split(',')]
 
-		return self.runDict(fdict,args,env,statefier)
+		pars = fdict["par"].split(",")
 
-	# def execute(self,line,env):
-	# 	pars = line.split("___")
-	# 	command = pars[0]
-		
-	# 	fdict = self.toFunction(command)
+		assert len(par) == len(pars)
+		# print (statefier())
+		# print (funcDict['step'])
+		# input(funcDict["contract"]["pos"])
 
-	# 	if fdict is None:
-	# 		return None
+		var = {}
 
-	# 	return self.runDict(fdict, env, pars[1:])
+		tmp = fdict["contract"]["pre"]
+		for label,val in zip(pars,par):
+			var[label] = val
 
-	def simulate(self,state,steps):
+			k = "?{}".format(label)
+			if k in tmp:
+				tmp = tmp.replace(label, "{}").format(val)
+
+		fdict["contract"] = self.getContract(fdict,statefier())
+
+		return self.runDict(fdict,var,env,statefier)
+
+
+	def getContract(self,incompleteContract,state):
 		from solve import dict2clause, toSet
-		# state   = toSet(state)
+		state   = toSet(state, {"bindings":{},"functions":self.logical_functions,"state":state})
+		
+		c = dict2clause(incompleteContract,functions=self.logical_functions,state=state)
+
+		possibilities = c.ground(state,axis=1)
+
+		if not len(possibilities):
+			return None
+
+		d = possibilities[0]
+
+		pre = ' and '.join(list(d.pos_pre) + ["not {}".format(x) for x in d.neg_pre])
+		pos = ' and '.join(list(d.pos_pos) + ["not {}".format(x) for x in d.neg_pos])
+
+		return {"pre" : pre, "pos" : pos}
+
+
+	def simulate(self,state,steps, poscond):
+		from solve import dict2clause, toSet, Clause
 		state   = toSet(state, {"bindings":{},"functions":self.logical_functions,"state":state})
 		getFunc = lambda x : x.split('=')[-1].split('(')[0]
 
@@ -263,43 +290,28 @@ class ActionMaker():
 
 			f = 0
 			for p in possibilities:
-				# print (p)
 				if p.applicable(state):
 					state = p.apply(state)
 					f = 1
 
 			if not f:
-				# print (len(possibilities))
-				# input('ytho')
 				return False
-		return True
 
-	def runDict(self,funcDict,par,env,statefier):
-		pars = funcDict["par"].split(",")
+		c = Clause("goal", poscond, "")
+		return c.applicable(state)
 
-		assert len(par) == len(pars)
-		# print (statefier())
-		# print (funcDict['step'])
-		# input(funcDict["contract"]["pos"])
-
-		var = {}
+	def runDict(self,funcDict,var,env,statefier):
 		steps = funcDict["step"].replace(" ","").split(";")
-
-		for label,val in zip(pars,par):
-			var[label] = val
-
-		# print (len(steps))
 
 		for i,line in enumerate(steps):
 			assign  = None
 			command = line
 
-			# print (type(steps), type(par))
-			applicable = self.simulate(statefier(), steps[i:])
+			applicable = self.simulate(statefier(), steps[i:], funcDict["contract"]["pos"])
 
 			if not applicable:
 				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"])
-				return found if not found else self.runDict(plan, par, env, statefier)
+				return found if not found else self.runDict(plan, var, env, statefier)
 
 			if '=' in line:
 				assign, command = line.split("=")

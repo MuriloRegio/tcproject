@@ -47,6 +47,7 @@ class Clause:
 			g = map(lambda x : x[0].pos_pre.issubset(state) and not x[0].neg_pre.intersection(state),grounded)
 			return any(g)
 
+		## Guarantees equivalent of self.pos_pre.issubset(state)
 		for e1 in self.pos_pre:
 			if "False" in e1:
 				return False
@@ -138,6 +139,7 @@ class Clause:
 		possibilities = self.getPossibleBindings(c,axis)
 		lapply = lambda _d : lambda x,y=_d : applyBindings(x,y,self.functions,self.state)
 		#print (possibilities)
+		print (len(possibilities))
 
 		#matching
 		found = []
@@ -443,7 +445,7 @@ def clauseListToDictList(act,clauses):
 				d.append(all(tmp) and len(vars))
 				# d.append(any(tmp))
 
-			if all(d):
+			if all(d) and '?' in conditions[i]:
 				del conditions[i]
 
 		dDict["contract"][contType] = " and ".join(conditions)
@@ -505,7 +507,14 @@ if __name__ == "__main__":
 	target = "has M"
 
 
+	import sys
+	dump = open('/tmp/dump.txt','w')
+	tmp  = sys.stdout 
+	sys.stdout=dump
 	plan = getPlan(state, actions, target, "")
+	sys.stdout=tmp
+	dump.close()
+
 	if plan[0]:
 		plan = plan[1]
 		# for p in plan:

@@ -180,16 +180,18 @@ class env:
 		return state
 
 	def formatGoal(self,goal):
-		splits = goal.split(' and ')
+		splits  = goal.split(' and ')
+		rewrite = lambda l : ' '.join([x if x not in self.args else self.args[x] for x in l])
 
 		for i,line in enumerate(splits):
 			slots = line.split(" ")
 
 			if slots[0] != 'at':
+				splits[i] = rewrite(slots)
 				continue
 
-			slots[1]  = self.args[slots[1]]
-			splits[i] = ' '.join(slots)
+			slots[1]  = "{}".format(self.enf["coordinates"][slots[1]])
+			splits[i] = rewrite(slots)
 
 		return ' and '.join(splits)
 
@@ -275,12 +277,19 @@ def run(GUI, e):
 	agt = bot(GUI.queue,a)
 	pending = GUI.pending
 
-	e.formatGoal = lambda x : x
-	args = {"env":e.env, "statefier":e.statefy, "formatGoal": e, 
-			"red box":"R", "green box":"G", "blue box":"B", 
-			"room_1":"[3,5]","room_2":"[3,15]","room_3":"[3,25]",
-			"room_4":"[15,5]","room_5":"[15,15]","room_6":"[15,25]",
-			"corridor":"[9,15]"}
+	e.args = {
+		"env":e.env, "statefier":e.statefy, "formatGoal": e, 
+		"red box":"R", "green box":"G", "blue box":"B", 
+	}
+
+	e.env["coordinates"] = {
+		"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
+		"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
+		"corridor":[9,15]
+	}
+
+	for obj, coord in self.env["objects"].items():
+		e.env["coordinates"][obj] = coord
 
 
 	while 1:
@@ -289,16 +298,7 @@ def run(GUI, e):
 			msg = pending[0]
 			del pending[0]
 
-			# m = msg.split(' ')
-
-			# e.run(m[0])(*m[1:]+[e.env])
-
 			agt.proccessAnswer(msg,args)
-
-# def test():
-	# while 1:
-	# 	e.run("step_up")(e.env)
-	# 	print ("HELLO THERE")
 
 
 if __name__ == "__main__":

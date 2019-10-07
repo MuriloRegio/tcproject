@@ -75,6 +75,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 				if grounded not in possible_actions:
 					possible_actions.append(grounded)
 
+					print (grounded, l_applicable(grounded), heuristic(actions,grounded.apply(state),positive_goals,negative_goals))
+
 					for new_grounded in grounded.ground(target):
 						if new_grounded not in possible_actions: 
 							possible_actions.append(new_grounded)
@@ -88,7 +90,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 
 		#Take a look at applicable
 		for a in filter(l_applicable,possible_actions):
-			new_state = state.union(a.pos_pos).difference(a.neg_pos)
+			new_state = a.apply(state)
+			# new_state = state.union(a.pos_pos).difference(a.neg_pos)
 
 			# print ('===================================')
 			# print (state,a.state,sep='\n')
@@ -112,8 +115,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			# print ('Old -> ')
 			# print ([x for x in state if 'at' in x and 'self' in x])
 			# print('--------------------------------------------------------')
-			# new_cost = cost + heuristic(actions,new_state,positive_goals,negative_goals)
-			new_cost = cost + len(plan) + 1
+			new_cost = cost + heuristic(actions,new_state,positive_goals,negative_goals)
+			# new_cost = cost + len(plan)
 			# print (new_cost, [x for x in state if 'has' in x])
 			# new_cost = (cost+1)*(1-target.applicable(new_state))
 
