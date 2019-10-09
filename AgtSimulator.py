@@ -288,7 +288,7 @@ def run(GUI, e):
 		"corridor":[9,15]
 	}
 
-	for obj, coord in self.env["objects"].items():
+	for obj, coord in e.env["objects"].items():
 		e.env["coordinates"][obj] = coord
 
 
@@ -298,7 +298,7 @@ def run(GUI, e):
 			msg = pending[0]
 			del pending[0]
 
-			agt.proccessAnswer(msg,args)
+			agt.proccessAnswer(msg,e.args)
 
 
 if __name__ == "__main__":
