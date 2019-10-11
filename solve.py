@@ -443,7 +443,7 @@ def clauseListToDictList(act,clauses):
 			for par in dDict["par"].split(","):
 				tmp = []
 				for var in vars:
-					tmp.append(par not in var)
+                                    tmp.append(par != var[1:] or '?' not in var)
 				d.append(all(tmp) and len(vars))
 				# d.append(any(tmp))
 
@@ -506,7 +506,7 @@ if __name__ == "__main__":
 	r  = dict2clause(stepDict("right"),functions)
 	actions = [pu,dd,u,d,l,r]
 
-	target = "has M"
+	target = "at [15,15] R"
 
 
 	import sys

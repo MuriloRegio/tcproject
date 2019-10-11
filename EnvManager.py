@@ -98,17 +98,17 @@ def pickDict():
 
 #================================================================================
 #Drop Action
-def drop(coord, env):
+def drop(dest, env):
 	if env["has"] is None:
 		raise ValueError("Cannot pick up {} while holding {}".format(obj,env["has"]))
-	if not free(coord, env):
+	if not free(dest, env):
 		raise ValueError("Destination is already occupied")
-	if not close(coord, env["self"]):
+	if not close(dest, env["self"]):
 		raise ValueError("Not close enough to drop object {} at {}".format(obj, str(env["objects"][obj])))
 	
-	env["objects"][env["has"]] = coord
+	env["objects"][env["has"]] = dest
 	env["has"] = None
-	return (obj, coord)
+	return (obj, dest)
 
 def Contract_drop():
 	return {"pre" : "has ?obj and at ?coord self and is close(?coord, ?dest) and is free(?dest)",
@@ -116,9 +116,9 @@ def Contract_drop():
 
 def dropDict():
 	return {
-				"step":"drop(coord___,env___)",
+				"step":"drop(dest___,env___)",
 			"contract":Contract_drop(),
-				 "par":"coord,env",
+				 "par":"dest,env",
 				"name":"drop",
 			}
 #================================================================================
