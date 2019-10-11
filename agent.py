@@ -9,7 +9,7 @@ class bot:
 	def __init__(self,communicational_channel, back_agent = None):
 		import getpass
 		import random
-                import pwd
+		import pwd 
 		CLIENT_ACCESS_TOKEN = 'b58c216c5ad84793b84657f5e544e6b8'
 		self.ai = apiai.ApiAI(CLIENT_ACCESS_TOKEN)
 		self.last_response = None
@@ -47,6 +47,7 @@ class bot:
 			s = "{} &and& {}".format(splits[0],answer)
 
 		print (s)
+		print (self.last_response)
 		
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")
@@ -66,17 +67,19 @@ class bot:
 		r = None
 
 		if len(s) == 2:
-			command  = s[0]
+			#command  = s[0]
 			
 			if self.last_response["result"]["metadata"]["intentName"] == "Identify unknown":
-				command = command.replace(" and ","___").replace(", ","___").replace(" ","")
+				#command = command.replace(" and ","___").replace(", ","___").replace(" ","")
+				command = '___'.join([self.last_response["result"]["parameters"]["Action"]+self.last_response["result"]["parameters"]["Unknown"]]+self.last_response["result"]["parameters"]["Target"])
 				r = self.agent.execute(command,args)
 
 				if r is None:
 					self.pending_line = command
 
 			elif self.last_response["result"]["metadata"]["intentName"] == "as Logic":
-				command = command.replace(" and "," ").replace(" &and& ", " and ").replace(",","")
+				#command = command.replace(" and ","___").replace(" &and& ", " and ").replace(",","")
+				command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
 				
 				r = self.agent.createNew(self.pending_line, command, args)
 				

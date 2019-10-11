@@ -71,16 +71,22 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 		possible_actions = []
 		for a in actions:
 			a.state = state
+			print ('-->', a.name)
+			for grounded in a.ground(target):
+				for subground in grounded.ground(state, axis=1):
+					possible_actions.append(subground)
 			for grounded in a.ground(state, axis=1):
 				if grounded not in possible_actions:
 					possible_actions.append(grounded)
+					print (grounded.name)
 
-					print (grounded, l_applicable(grounded), heuristic(actions,grounded.apply(state),positive_goals,negative_goals))
+					#print (grounded, l_applicable(grounded), heuristic(actions,grounded.apply(state),positive_goals,negative_goals))
 
 					for new_grounded in grounded.ground(target):
 						if new_grounded not in possible_actions: 
 							possible_actions.append(new_grounded)
 
+		print ([type(a) for a in possible_actions])
 		# for a in possible_actions:
 		# 	print ('============')
 		# 	print (a)
@@ -95,8 +101,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 
 			# print ('===================================')
 			# print (state,a.state,sep='\n')
-			# print (a.name)
-			# print ('Old ->', a.pos_pos)
+			print (a.name)
+                        # print ('Old ->', a.pos_pos)
 			# print ('New ->', a.neg_pos)
 			# print ('From ->', state)
 			# print ('To ->', new_state)
@@ -108,15 +114,15 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 				# print ('Already explored!')
 				continue
 
-			# print (new_state)
+			print (new_state)
 			explored.add(key)
 
 			# print('--------------------------------------------------------')
 			# print ('Old -> ')
 			# print ([x for x in state if 'at' in x and 'self' in x])
 			# print('--------------------------------------------------------')
-			new_cost = cost + heuristic(actions,new_state,positive_goals,negative_goals)
-			# new_cost = cost + len(plan)
+			# new_cost = cost + heuristic(actions,new_state,positive_goals,negative_goals)
+			new_cost = cost + len(plan)
 			# print (new_cost, [x for x in state if 'has' in x])
 			# new_cost = (cost+1)*(1-target.applicable(new_state))
 
@@ -128,7 +134,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			new_plan = plan + [a]
 			states.put((new_cost,count,new_state,new_plan))
 		# input('')
-		# print('cycle done', states.qsize(), len(explored), sep='\t\t')
+		print('cycle done', states.qsize(), len(explored), sep='\t\t')
 		# input('')
 
 	# print ('LEAVING FROM FAILURE')
@@ -209,7 +215,7 @@ if __name__ == "__main__":
 	for obj, coord in env['objects'].items():
 		initial_state += " and at {} {}".format(list(coord), obj)
 
-	target = "at [7,1] self and has box"
+	target = "at [1,1] box"
 
 	found,plan = p.getPlan(initial_state,c,target,"")
 	if found:

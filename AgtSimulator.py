@@ -184,13 +184,14 @@ class env:
 		rewrite = lambda l : ' '.join([x if x not in self.args else self.args[x] for x in l])
 
 		for i,line in enumerate(splits):
-			slots = line.split(" ")
+			slots = line.split("___")
 
 			if slots[0] != 'at':
 				splits[i] = rewrite(slots)
 				continue
 
-			slots[1]  = "{}".format(self.enf["coordinates"][slots[1]])
+			slots[1]  = slots[1] if slots[1] not in self.args else self.args[slots[1]]
+			slots[1]  = "{}".format(self.env["coordinates"][slots[1]]).replace(' ','')
 			splits[i] = rewrite(slots)
 
 		return ' and '.join(splits)

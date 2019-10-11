@@ -180,8 +180,8 @@ class ActionMaker():
 			self.learned_actions[aName]["name"] = aName
 			# print (plan)
 
-			# with open(".learned/a.json","w") as outfile:
-			# 	outfile.write(str(self.learned_actions))
+			with open(".learned/a.json","w") as outfile:
+				outfile.write(str(self.learned_actions))
 			#add it to the agent's list
 			# return self.execute(line.replace("noop",aName), img,imgpath,det=det)
 			return self.execute(line, args)

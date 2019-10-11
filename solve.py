@@ -128,6 +128,8 @@ class Clause:
 						tmp.append(bindings)
 			possibilities = possibilities + tmp
 
+		if 'drop' in self.name:
+			print ('==',possibilities)
 		if len(possibilities) == 0:
 			return []
 		threshold = max(map(len,possibilities))
@@ -139,7 +141,7 @@ class Clause:
 		possibilities = self.getPossibleBindings(c,axis)
 		lapply = lambda _d : lambda x,y=_d : applyBindings(x,y,self.functions,self.state)
 		#print (possibilities)
-		print (len(possibilities))
+		#print (len(possibilities))
 
 		#matching
 		found = []
