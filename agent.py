@@ -47,7 +47,7 @@ class bot:
 			s = "{} &and& {}".format(splits[0],answer)
 
 		print (s)
-		print (self.last_response)
+		# print (self.last_response)
 		
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")

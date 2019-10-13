@@ -2,10 +2,14 @@
 from builtins import map as MAP
 from builtins import zip as ZIP
 from builtins import filter as FILTER
+from builtins import reversed as REVERSED
+from builtins import enumerate as ENUMERATE
 
 map = lambda *pars : list(MAP(*pars))
 zip = lambda *pars : list(ZIP(*pars))
 filter = lambda *pars : list(FILTER(*pars))
+reversed = lambda *pars : list(REVERSED(*pars))
+enumerate = lambda *pars : list(ENUMERATE(*pars))
 apply = lambda foo,*pars,**kargs : foo(*pars, **kargs)
 
 if __name__ == "__main__":

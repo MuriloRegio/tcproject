@@ -128,8 +128,6 @@ class Clause:
 						tmp.append(bindings)
 			possibilities = possibilities + tmp
 
-		if 'drop' in self.name:
-			print ('==',possibilities)
 		if len(possibilities) == 0:
 			return []
 		threshold = max(map(len,possibilities))
@@ -417,11 +415,22 @@ def clauseListToDictList(act,clauses):
 
 			steps["return_name"] = steps["return_name"][1:] + [n]
 
+		pars = d["par"].split(",")
+		for old,new in steps["distinct"]:
+			if old in pars:
+				i = pars.index(old)
+				pars[i] = new
+		# print (steps["distinct"])
+		# for i,p in reversed(enumerate(pars)):
+		# 	if p+"___" not in d["step"]:
+		# 		del pars[i]
+		d["par"] = ','.join(pars)
+
 		if dDict is None:
 			dDict = d
 		else:
-			# print steps["distinct"]
-			# print dDict["contract"],d["contract"]
+			# print steps[" "]
+			print (steps["distinct"])
 			dDict = act.joinDicts(dDict,d,distinct=steps["distinct"],return_name=steps["return_name"])
 
 		steps["distinct"] = []
@@ -443,7 +452,7 @@ def clauseListToDictList(act,clauses):
 			for par in dDict["par"].split(","):
 				tmp = []
 				for var in vars:
-                                    tmp.append(par != var[1:] or '?' not in var)
+					tmp.append(par != var[1:] or '?' not in var)
 				d.append(all(tmp) and len(vars))
 				# d.append(any(tmp))
 

@@ -100,14 +100,16 @@ def pickDict():
 #Drop Action
 def drop(dest, env):
 	if env["has"] is None:
-		raise ValueError("Cannot pick up {} while holding {}".format(obj,env["has"]))
+		raise ValueError("Cannot drop while not holding anything!")
 	if not free(dest, env):
 		raise ValueError("Destination is already occupied")
 	if not close(dest, env["self"]):
 		raise ValueError("Not close enough to drop object {} at {}".format(obj, str(env["objects"][obj])))
 	
+	obj = env["has"]
 	env["objects"][env["has"]] = dest
 	env["has"] = None
+	
 	return (obj, dest)
 
 def Contract_drop():

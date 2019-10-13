@@ -71,22 +71,18 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 		possible_actions = []
 		for a in actions:
 			a.state = state
-			print ('-->', a.name)
 			for grounded in a.ground(target):
 				for subground in grounded.ground(state, axis=1):
 					possible_actions.append(subground)
+
 			for grounded in a.ground(state, axis=1):
 				if grounded not in possible_actions:
 					possible_actions.append(grounded)
-					print (grounded.name)
-
-					#print (grounded, l_applicable(grounded), heuristic(actions,grounded.apply(state),positive_goals,negative_goals))
 
 					for new_grounded in grounded.ground(target):
 						if new_grounded not in possible_actions: 
 							possible_actions.append(new_grounded)
 
-		print ([type(a) for a in possible_actions])
 		# for a in possible_actions:
 		# 	print ('============')
 		# 	print (a)

@@ -190,7 +190,10 @@ class env:
 				splits[i] = rewrite(slots)
 				continue
 
-			slots[1]  = slots[1] if slots[1] not in self.args else self.args[slots[1]]
+			slots[1]  = slots[1] if slots[1] not in self.args else str(self.args[slots[1]])
+			# print (slots[1])
+			# print (self.env["coordinates"])
+			# print (self.env["coordinates"][slots[1]])
 			slots[1]  = "{}".format(self.env["coordinates"][slots[1]]).replace(' ','')
 			splits[i] = rewrite(slots)
 
@@ -281,6 +284,9 @@ def run(GUI, e):
 	e.args = {
 		"env":e.env, "statefier":e.statefy, "formatGoal": e, 
 		"red box":"R", "green box":"G", "blue box":"B", 
+		"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
+		"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
+		"corridor":[9,15]
 	}
 
 	e.env["coordinates"] = {

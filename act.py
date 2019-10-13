@@ -83,15 +83,15 @@ class ActionMaker():
 		f1 = d1["step"].replace(" ","")
 		f2 = d2["step"].replace(" ","")
 
+		for elem,newName in distinct:
+			f2 = f2.replace(elem,newName)
+
 		pars = d1["par"].split(",")
 		for par in d2["par"].split(","):
 			for elem,newName in distinct:
 				if par == elem:
-					f2 = f2.replace(par+"___", newName+"___")
-
-					if par not in pars:
-						pars.append(par)
 					par = newName
+					break
 
 			if par not in pars:
 				pars.append(par)
@@ -131,16 +131,23 @@ class ActionMaker():
 				tmp_cont[t].add(' '.join(splits))
 		d2_cont = tmp_cont
 
+		print ('//**', functs, '**\\\\')
 		for c in d2_cont["pre"]:
+			print ('-->', c)
 			if c in d1_cont["pos"]:
 				d1_cont["pos"].remove(c)
 			else:
 				d1_cont["pre"].add(c)
 
 		for c in d2_cont["pos"]:
+			print ('-->', c)
 			if len(c) > 5 and c[:5] == "not ":
 				if c[5:] in d1_cont["pos"]:
 					d1_cont["pos"].remove(c[5:])
+			if "not "+c in d1_cont["pos"]:
+				print ("WELL HELLO THERE")
+				d1_cont["pos"].remove("not "+c)
+
 			d1_cont["pos"].add(c)
 
 		contracts = {}
@@ -240,13 +247,22 @@ class ActionMaker():
 
 		var = {}
 
-		tmp = fdict["contract"]["pre"]
+		tmp_pre = fdict["contract"]["pre"]
+		tmp_pos = fdict["contract"]["pos"]
+
 		for label,val in zip(pars,par):
 			var[label] = val
 
 			k = "?{}".format(label)
-			if k in tmp:
-				tmp = tmp.replace(label, "{}").format(val)
+			if k in tmp_pre:
+				tmp_pre = tmp_pre.replace(k, "{0}").format(val)
+			if k in tmp_pos:
+				tmp_pos = tmp_pos.replace(k, "{0}").format(val)
+				# tmp_pos = tmp_pos.replace(k, "{}")
+				# print (tmp_pos, val)
+
+		fdict["contract"]["pre"] = tmp_pre
+		fdict["contract"]["pos"] = tmp_pos
 
 		fdict["contract"] = self.getContract(fdict,statefier())
 
@@ -276,17 +292,19 @@ class ActionMaker():
 		from solve import dict2clause, toSet, Clause
 		state   = toSet(state, {"bindings":{},"functions":self.logical_functions,"state":state})
 		getFunc = lambda x : x.split('=')[-1].split('(')[0]
+		goal = Clause("goal", poscond, "")
 
 		# input(len(steps))
-
+		# input(goal)
 		for step in steps:
 			comm = getFunc(step)
 			d = self.toFunction(comm)
-			# print (comm, d)	
+			# print (comm, d)
 
 			c = dict2clause(d,functions=self.logical_functions,state=state)
 			
 			possibilities = c.ground(state,axis=1)
+			[[possibilities.append(x) for x in tmp.ground(state,axis=1)] for tmp in c.ground(goal)]
 
 			f = 0
 			for p in possibilities:
@@ -295,10 +313,11 @@ class ActionMaker():
 					f = 1
 
 			if not f:
+				print(step,possibilities)
 				return False
 
-		c = Clause("goal", poscond, "")
-		return c.applicable(state)
+		# print (goal, state)
+		return goal.applicable(state)
 
 	def runDict(self,funcDict,var,env,statefier):
 		steps = funcDict["step"].replace(" ","").split(";")
@@ -308,7 +327,7 @@ class ActionMaker():
 			command = line
 
 			applicable = self.simulate(statefier(), steps[i:], funcDict["contract"]["pos"])
-
+			
 			if not applicable:
 				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"])
 				return found if not found else self.runDict(plan, var, env, statefier)
@@ -324,6 +343,7 @@ class ActionMaker():
 				if func_par in command:
 					command = command.replace(func_par,"var['{}']".format(label))
 
+			# print (command)
 			return_value = eval(command)
 
 			if assign is not None:
@@ -369,8 +389,14 @@ if __name__ == "__main__":
 		)
 
 	e.formatGoal = lambda x : x
-	a.createNew("noop___red_box", "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
-	
+	# a.createNew("noop___red_box", "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
+	a.execute('place___red box___room_5',args = {
+		"env":e.env, "statefier":e.statefy, "formatGoal": e, 
+		"red box":"R", "green box":"G", "blue box":"B", 
+		"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
+		"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
+		"corridor":[9,15]
+	})
 
 	# res = a.learned_actions["noop"]
 
