@@ -7,11 +7,10 @@ def h(actions, initial_state, positive_goals, negative_goals):
 	state = initial_state
 	new_state = initial_state
 
-	l_applicable = lambda a : a.pos_pre.issubset(state)
-
 	target = Clause(
 		"target",
-		(positive_goals,negative_goals),
+		# (positive_goals,negative_goals),
+		(positive_goals,set([])),
 		"",
 	)
 	# joined_goals = positive_goals.union(negative_goals)
@@ -19,19 +18,31 @@ def h(actions, initial_state, positive_goals, negative_goals):
 	# WILL ENTER IN A LOOP IF AGENT'S UNABLE TO FULLFIL THE GOAL UNDER ANY CIRCUNSTANCE
 	# I.E., ACTION NOT SUPPORTED
 	while True:
-		if positive_goals.issubset(state):
+		# if positive_goals.issubset(state):
+		if target.applicable(state):
 			break
 
 		for a in actions:
 			a.state = state
+			i = 0
+			j = 0
 			for grounded in a.ground(state,axis=1):
-				# subgrounds = grounded.ground(joined_goals,axis=1)
-				subgrounds = grounded.ground(target)
-				if len(subgrounds) == 0:
+				i += 1
+				grounded.neg_pre = set([])
+				# print ('-->', a.name)
+				# print (a.name, a.pos_pre,state, grounded.pos_pre, sep='\n')
+				if grounded.applicable(state):
 					new_state = new_state.union(grounded.pos_pos)
-				else:
-					for g in subgrounds:
-						new_state = new_state.union(g.pos_pos)
+					j +=1
+				# subgrounds = grounded.ground(joined_goals,axis=1)
+				# subgrounds = grounded.ground(target)
+				# if len(subgrounds) == 0:
+				# 	new_state = new_state.union(grounded.pos_pos)
+				# else:
+				# 	for g in subgrounds:
+				# 		new_state = new_state.union(g.pos_pos)
+			print ("{}/{} -- {}".format(j,i, a.name))
+		print ('')
 
 		if len(state) == len(new_state):
 			return float("inf")
@@ -55,34 +66,37 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			state=initial_state
 		)
 
+	count = 0
 	states.put((0,0,initial_state,[]))
 	print (target)
+	import time
+	start = time.time()
 
 	while not states.empty():
-		cost, count, state, plan = states.get()
+		cost, _, state, plan = states.get()
 
 		# if any(["has R" in x for x in state]):
 		# 	print (state)
 
 		if target.applicable(state):
-			# print ('LEAVING FROM SUCCESS')
+			print ('LEAVING FROM SUCCESS')
+			print ("took {:.3f}s".format(time.time()-start))
 			return (True,plan)
 
 		possible_actions = []
 		for a in actions:
 			a.state = state
-			for grounded in a.ground(target):
-				for subground in grounded.ground(state, axis=1):
-					possible_actions.append(subground)
+			# for grounded in a.ground(target):
+			# 	for subground in grounded.ground(state, axis=1):
+			# 		possible_actions.append(subground)
 
 			for grounded in a.ground(state, axis=1):
 				if grounded not in possible_actions:
 					possible_actions.append(grounded)
 
-					for new_grounded in grounded.ground(target):
-						if new_grounded not in possible_actions: 
-							possible_actions.append(new_grounded)
-
+					# for new_grounded in grounded.ground(target):
+					# 	if new_grounded not in possible_actions: 
+					# 		possible_actions.append(new_grounded)
 		# for a in possible_actions:
 		# 	print ('============')
 		# 	print (a)
@@ -97,8 +111,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 
 			# print ('===================================')
 			# print (state,a.state,sep='\n')
-			print (a.name)
-                        # print ('Old ->', a.pos_pos)
+			print ('-->', a.name, '<--')
+			# print ('Old ->', a.pos_pos)
 			# print ('New ->', a.neg_pos)
 			# print ('From ->', state)
 			# print ('To ->', new_state)
@@ -110,7 +124,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 				# print ('Already explored!')
 				continue
 
-			print (new_state)
+			# print (new_state)
 			explored.add(key)
 
 			# print('--------------------------------------------------------')
@@ -130,9 +144,10 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			new_plan = plan + [a]
 			states.put((new_cost,count,new_state,new_plan))
 		# input('')
-		print('cycle done', states.qsize(), len(explored), sep='\t\t')
+		print('{}-cycle done'.format(count), states.qsize(), len(explored), sep='\t\t')
 		# input('')
 
+	print ("took {:.3f}s".format(time.time()-start))
 	# print ('LEAVING FROM FAILURE')
 	#add case of failure, what was the closest it got
 	return (False,[[]])
@@ -188,18 +203,36 @@ if __name__ == "__main__":
 			functions
 		),
 		Clause(
-			"drop",
-			Contract_drop()["pre"],
-			Contract_drop()["pos"],
+			"drop_up",
+			Contract_drop("up")["pre"],
+			Contract_drop("up")["pos"],
+			functions
+		),
+		Clause(
+			"drop_down",
+			Contract_drop("down")["pre"],
+			Contract_drop("down")["pos"],
+			functions
+		),
+		Clause(
+			"drop_right",
+			Contract_drop("right")["pre"],
+			Contract_drop("right")["pos"],
+			functions
+		),
+		Clause(
+			"drop_left",
+			Contract_drop("left")["pre"],
+			Contract_drop("left")["pos"],
 			functions
 		),
 	]
 
-	initial_state = "at [1,1] self and hands_free"
+	initial_state = "current [1,1] self and hands_free"
 	for d in ["up","down","left","right"]:
 		c.append(
 			Clause(
-				"step-"+d,
+				"step_"+d,
 				Contract_step(d)["pre"],
 				Contract_step(d)['pos'],
 				functions

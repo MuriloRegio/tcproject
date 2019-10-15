@@ -86,56 +86,84 @@ class Clause:
 		#print (tokenized_self_pos)
 		#print (list(tokenized_self_pos))
 
-		for s in tokenized_c_pos:
+		bindings = {}
+		for t in ["pos", "neg"]:
+			tokenized_self = eval("tokenized_self_{}".format(t))
+			tokenized_c    = eval("tokenized_c_{}".format(t))
+
+			for s in tokenized_c:
+				for e in filter(lambda x: l_filter(x,s),tokenized_self):
+					for i in range(1,len(e)):
+						if '?' in e[i]:
+							if e[i] not in bindings:
+								bindings[e[i]] = set([])
+							bindings[e[i]].add(s[i])
+
+		keys = list(bindings)
+		def getAllBindings(curKey):
+			if curKey == len(keys):
+				return [[]]
+
+			key = keys[curKey]
 			tmp = []
-			for e in filter(lambda x: l_filter(x,s),tokenized_self_pos):
-				bindings = {}
-				for i in range(len(e)-1):
-					if '?' in e[i+1]:
-						bindings[e[i+1]] = s[i+1]
-				# print ('=============/')
-				# print (e,s)
-				# print (bindings)
-				# print ('/=============')
-				if len(list(bindings))>0:
-					add = 1
-					for p in possibilities:
-						if not set(bindings).issubset(set(p)):
-							for k,v in bindings.items():
-								p[k] = v
-							add = 0
-					if add:
-						tmp.append(bindings)
-			possibilities = possibilities + tmp
+			for l in getAllBindings(curKey+1):
+				for binding in bindings[key]:
+					tmp.append([(key,binding)]+l)
+			return tmp
 
-		for s in tokenized_c_neg:
-			tmp = []
-			for e in filter(lambda x: l_filter(x,s),tokenized_self_neg):
-				bindings = {}
-				for i in range(len(e)-1):
-					if '?' in e[i+1]:
-						bindings[e[i+1]] = s[i+1]
+		[possibilities.append(dict(pseudo_dict)) for pseudo_dict in getAllBindings(0)]
 
 
-				if len(list(bindings))>0:
-					add = 1
-					for p in possibilities:
-						if not set(bindings).issubset(set(p)):
-							for k,v in bindings.items():
-								p[k] = v
-							add = 0
-					if add:
-						tmp.append(bindings)
-			possibilities = possibilities + tmp
+		# for s in tokenized_c_pos:
+		# 	tmp = []
+		# 	for e in filter(lambda x: l_filter(x,s),tokenized_self_pos):
+		# 		bindings = {}
+		# 		for i in range(len(e)-1):
+		# 			if '?' in e[i+1]:
+		# 				bindings[e[i+1]] = s[i+1]
+		# 		# print ('=============/')
+		# 		# print (e,s)
+		# 		# print (bindings)
+		# 		# print ('/=============')
+		# 		if len(list(bindings))>0:
+		# 			add = 1
+		# 			for p in possibilities:
+		# 				if not set(bindings).issubset(set(p)):
+		# 					for k,v in bindings.items():
+		# 						p[k] = v
+		# 					add = 0
+		# 			if add:
+		# 				tmp.append(bindings)
+		# 	possibilities = possibilities + tmp
 
-		if len(possibilities) == 0:
-			return []
-		threshold = max(map(len,possibilities))
-		# print possibilities
-		possibilities = [x for x in possibilities if len(x)==threshold]
+		# for s in tokenized_c_neg:
+		# 	tmp = []
+		# 	for e in filter(lambda x: l_filter(x,s),tokenized_self_neg):
+		# 		bindings = {}
+		# 		for i in range(len(e)-1):
+		# 			if '?' in e[i+1]:
+		# 				bindings[e[i+1]] = s[i+1]
+
+
+		# 		if len(list(bindings))>0:
+		# 			add = 1
+		# 			for p in possibilities:
+		# 				if not set(bindings).issubset(set(p)):
+		# 					for k,v in bindings.items():
+		# 						p[k] = v
+		# 					add = 0
+		# 			if add:
+		# 				tmp.append(bindings)
+		# 	possibilities = possibilities + tmp
+
+		# if len(possibilities) == 0:
+		# 	return []
+		# threshold = max(map(len,possibilities))
+		# # print possibilities
+		# possibilities = [x for x in possibilities if len(x)==threshold]
 		return possibilities
 
-	def ground(self,c,axis=0):
+	def ground(self,c,axis=0, restrictions=None):
 		possibilities = self.getPossibleBindings(c,axis)
 		lapply = lambda _d : lambda x,y=_d : applyBindings(x,y,self.functions,self.state)
 		#print (possibilities)
@@ -144,6 +172,17 @@ class Clause:
 		#matching
 		found = []
 		for d in possibilities:
+			if restrictions is not None:
+				skip = 0
+				for key,value in restrictions:
+					if key in d and d[key] != value:
+						skip = 1
+						break
+				if skip:
+					continue
+
+			# print (d)
+
 			# grounded_pos_pre = map(lambda x: applyBindings(x,d,self.functions),self.pos_pre)
 			# grounded_neg_pre = map(lambda x: applyBindings(x,d,self.functions),self.neg_pre)
 			# grounded_pos_pos = map(lambda x: applyBindings(x,d,self.functions),self.pos_pos)
@@ -429,14 +468,15 @@ def clauseListToDictList(act,clauses):
 		if dDict is None:
 			dDict = d
 		else:
-			# print steps[" "]
-			print (steps["distinct"])
 			dDict = act.joinDicts(dDict,d,distinct=steps["distinct"],return_name=steps["return_name"])
 
 		steps["distinct"] = []
 
-	for p in reversed(del_pars): 
-		dDict["par"] = dDict["par"].replace(",{}".format(p),"")
+	dDict["par"] = ','.join([
+			x for x in dDict["par"].split(",") 
+			if x not in del_pars and x+'___' in dDict["step"]
+		]
+	)
 
 	### Check to remove conditions that don't appear on the parameters
 	for contType in dDict["contract"]:
@@ -461,6 +501,16 @@ def clauseListToDictList(act,clauses):
 
 		dDict["contract"][contType] = " and ".join(conditions)
 
+	### Check to remove pos conditions placeholders that don't appear on the pre conditions
+	tokens = dDict["contract"]["pre"].split(" ")
+	conditions = dDict["contract"]["pos"].split(" and ")
+	for i,c in reversed(enumerate(conditions)):
+		for token in c.split(' '):
+			print (token, token in tokens, end='---')
+			if '?' in token and token not in tokens:
+				del conditions[i]
+				break
+	dDict["contract"]["pos"] = " and ".join(conditions)
 
 	return dDict
 
@@ -485,13 +535,19 @@ if __name__ == "__main__":
 			{
 				"step_down":stepDict('down'),"step_up":stepDict('up'), 
 				"step_right":stepDict('right'),"step_left":stepDict('left'), 
-				"pick" : pickDict(), "drop":dropDict()
+				"drop_down":dropDict('down'),"drop_up":dropDict('up'), 
+				"drop_right":dropDict('right'),"drop_left":dropDict('left'), 
+				"pick" : pickDict()
 			},
 			{
 				"step_down":lambda e=e.env : step(env,"down"), 
 				"step_right":lambda e=e.env : step(env,"right"), 
 				"step_left":lambda e=e.env : step(env,"left"), 
 				"step_up":lambda e=e.env : step(env,"up"), 
+				"drop_down":lambda e=e.env : drop(env,"down"), 
+				"drop_right":lambda e=e.env : drop(env,"right"), 
+				"drop_left":lambda e=e.env : drop(env,"left"), 
+				"drop_up":lambda e=e.env : drop(env,"up"), 
 				"pick" : lambda x, y=e.env : pick(x,y), 
 				"drop" : lambda x, y=e.env : drop(x,y), 
 			},
@@ -508,23 +564,33 @@ if __name__ == "__main__":
 	}
 
 	pu = dict2clause(pickDict(),functions)
-	dd = dict2clause(dropDict(),functions)
+	# dd = dict2clause(dropDict(),functions)
 	u  = dict2clause(stepDict("up"),functions)
 	d  = dict2clause(stepDict("down"),functions)
 	l  = dict2clause(stepDict("left"),functions)
 	r  = dict2clause(stepDict("right"),functions)
-	actions = [pu,dd,u,d,l,r]
+	du  = dict2clause(dropDict("up"),functions)
+	dd  = dict2clause(dropDict("down"),functions)
+	dl  = dict2clause(dropDict("left"),functions)
+	dr  = dict2clause(dropDict("right"),functions)
+	actions = [pu,u,d,l,r,du,dd,dl,dr]
 
-	target = "at [15,15] R"
+	print (e.statefy())
+	places = "{}-{}".format(list(e.env["objects"]["R"]), list(e.env["objects"]["G"])).replace(' ','').split('-')
+	target = "at {} G and at {} R".format(places[0],places[1])
+	# target = "at [3,25] G"
 
+	print (target)
 
-	import sys
-	dump = open('/tmp/dump.txt','w')
-	tmp  = sys.stdout 
-	sys.stdout=dump
+	# import sys
+	# dump = open('/tmp/dump.txt','w')
+	# tmp  = sys.stdout 
+	# sys.stdout=dump
 	plan = getPlan(state, actions, target, "")
-	sys.stdout=tmp
-	dump.close()
+	# sys.stdout=tmp
+	# dump.close()
+
+	print (plan)
 
 	if plan[0]:
 		plan = plan[1]

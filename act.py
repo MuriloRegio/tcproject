@@ -131,21 +131,21 @@ class ActionMaker():
 				tmp_cont[t].add(' '.join(splits))
 		d2_cont = tmp_cont
 
-		print ('//**', functs, '**\\\\')
+		# print ('//**', functs, '**\\\\')
 		for c in d2_cont["pre"]:
-			print ('-->', c)
+			# print ('-->', c)
 			if c in d1_cont["pos"]:
 				d1_cont["pos"].remove(c)
 			else:
 				d1_cont["pre"].add(c)
 
 		for c in d2_cont["pos"]:
-			print ('-->', c)
+			# print ('-->', c)
 			if len(c) > 5 and c[:5] == "not ":
 				if c[5:] in d1_cont["pos"]:
 					d1_cont["pos"].remove(c[5:])
 			if "not "+c in d1_cont["pos"]:
-				print ("WELL HELLO THERE")
+				# print ("WELL HELLO THERE")
 				d1_cont["pos"].remove("not "+c)
 
 			d1_cont["pos"].add(c)
@@ -212,6 +212,10 @@ class ActionMaker():
 
 		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
 
+		print(s0)
+		print(goal)
+		# input()
+
 		found, plan = solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
 
 		return found, (None if not found else solve.clauseListToDictList(self,plan))
@@ -240,6 +244,8 @@ class ActionMaker():
 
 		pars = fdict["par"].split(",")
 
+		print (pars, par)
+
 		assert len(par) == len(pars)
 		# print (statefier())
 		# print (funcDict['step'])
@@ -247,24 +253,33 @@ class ActionMaker():
 
 		var = {}
 
-		tmp_pre = fdict["contract"]["pre"]
-		tmp_pos = fdict["contract"]["pos"]
+		tmp_pre = fdict["contract"]["pre"].split(' ')
+		tmp_pos = fdict["contract"]["pos"].split(' ')
 
 		for label,val in zip(pars,par):
 			var[label] = val
 
 			k = "?{}".format(label)
-			if k in tmp_pre:
-				tmp_pre = tmp_pre.replace(k, "{0}").format(val)
-			if k in tmp_pos:
-				tmp_pos = tmp_pos.replace(k, "{0}").format(val)
+			for i,token in enumerate(tmp_pre):
+				if token == k:
+					tmp_pre[i] = "{0}".format(val).replace(" ","") # Spaces are evil
+			for i,token in enumerate(tmp_pos):
+				if token == k:
+					tmp_pos[i] = "{0}".format(val).replace(" ","") # Spaces are evil
+			# if k in tmp_pre:
+			# 	tmp_pre = tmp_pre.replace(k, "{0}").format(val)
+			# if k in tmp_pos:
+			# 	tmp_pos = tmp_pos.replace(k, "{0}").format(val)
 				# tmp_pos = tmp_pos.replace(k, "{}")
 				# print (tmp_pos, val)
 
-		fdict["contract"]["pre"] = tmp_pre
-		fdict["contract"]["pos"] = tmp_pos
+		fdict["contract"]["pre"] = ' '.join(tmp_pre)
+		fdict["contract"]["pos"] = ' '.join(tmp_pos)
 
 		fdict["contract"] = self.getContract(fdict,statefier())
+
+		if fdict["contract"] is None:
+			return None
 
 		return self.runDict(fdict,var,env,statefier)
 
@@ -277,6 +292,9 @@ class ActionMaker():
 
 		possibilities = c.ground(state,axis=1)
 
+		print (c)
+		print (c.getPossibleBindings(state,axis=1))
+
 		if not len(possibilities):
 			return None
 
@@ -288,10 +306,15 @@ class ActionMaker():
 		return {"pre" : pre, "pos" : pos}
 
 
-	def simulate(self,state,steps, poscond):
+	def simulate(self,state,steps, poscond,vars):
 		from solve import dict2clause, toSet, Clause
 		state   = toSet(state, {"bindings":{},"functions":self.logical_functions,"state":state})
 		getFunc = lambda x : x.split('=')[-1].split('(')[0]
+		getPars = lambda x : x.split('=')[-1].split('(')[1][:-1].split(',')
+
+		# print (getPars(steps[0]),vars)
+
+		# input(poscond)
 		goal = Clause("goal", poscond, "")
 
 		# input(len(steps))
@@ -299,24 +322,47 @@ class ActionMaker():
 		for step in steps:
 			comm = getFunc(step)
 			d = self.toFunction(comm)
-			# print (comm, d)
+
+			old = getPars(d["step"])
+			new = getPars(step)
 
 			c = dict2clause(d,functions=self.logical_functions,state=state)
-			
-			possibilities = c.ground(state,axis=1)
-			[[possibilities.append(x) for x in tmp.ground(state,axis=1)] for tmp in c.ground(goal)]
+
+			tmp = []
+			for par,var in zip(old,new):
+				if '___' not in par:
+					continue
+
+				tmp.append(('?'+par[:-3],vars[var[:-3]]))
+
+			possibilities = c.ground(state,axis=1,restrictions=tmp)
+			# print (len(possibilities), c.name)
+			# [[possibilities.append(x) for x in tmp.ground(state,axis=1)] for tmp in c.ground(goal)]
+
+			# if len(possibilities)>1:
+			# 	for p in possibilities:
+			# 		print(p.applicable(state), p)
+
+				# input()
+
+			# print ()
 
 			f = 0
 			for p in possibilities:
 				if p.applicable(state):
+					# print (p)
 					state = p.apply(state)
 					f = 1
+					break
 
 			if not f:
-				print(step,possibilities)
+				input(step,possibilities)
 				return False
 
 		# print (goal, state)
+		# print(goal.__str__(),state)
+		if not goal.applicable(state):
+			input(goal.applicable(state))
 		return goal.applicable(state)
 
 	def runDict(self,funcDict,var,env,statefier):
@@ -326,11 +372,14 @@ class ActionMaker():
 			assign  = None
 			command = line
 
-			applicable = self.simulate(statefier(), steps[i:], funcDict["contract"]["pos"])
+			# print (funcDict)
+			# print ('')
+			applicable = bool(self.simulate(statefier(), steps[i:], funcDict["contract"]["pos"],var))
+			# input(applicable)
 			
 			if not applicable:
 				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"])
-				return found if not found else self.runDict(plan, var, env, statefier)
+				return found if not found else self.runDict(new_plan, var, env, statefier)
 
 			if '=' in line:
 				assign, command = line.split("=")
@@ -375,13 +424,19 @@ if __name__ == "__main__":
 			{
 				"step_down":stepDict('down'),"step_up":stepDict('up'), 
 				"step_right":stepDict('right'),"step_left":stepDict('left'), 
-				"pick" : pickDict(), "drop":dropDict()
+				"drop_down":dropDict('down'),"drop_up":dropDict('up'), 
+				"drop_right":dropDict('right'),"drop_left":dropDict('left'), 
+				"pick" : pickDict()
 			},
 			{
 				"step_down"  : lambda e=e.env : step(e,"down"), 
 				"step_right" : lambda e=e.env : step(e,"right"), 
 				"step_left"  : lambda e=e.env : step(e,"left"), 
 				"step_up"    : lambda e=e.env : step(e,"up"), 
+				"drop_down"	 : lambda e=e.env : drop(env,"down"), 
+				"drop_right" : lambda e=e.env : drop(env,"right"), 
+				"drop_left"	 : lambda e=e.env : drop(env,"left"), 
+				"drop_up"	 : lambda e=e.env : drop(env,"up"), 
 				"pick"       : lambda x, y=e.env : pick(x,y), 
 				"drop"       : lambda x, y=e.env : drop(x,y), 
 			},
@@ -390,13 +445,13 @@ if __name__ == "__main__":
 
 	e.formatGoal = lambda x : x
 	# a.createNew("noop___red_box", "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
-	a.execute('place___red box___room_5',args = {
-		"env":e.env, "statefier":e.statefy, "formatGoal": e, 
-		"red box":"R", "green box":"G", "blue box":"B", 
-		"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
-		"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
-		"corridor":[9,15]
-	})
+	# a.execute('place___red box___room_5',args = {
+	# 	"env":e.env, "statefier":e.statefy, "formatGoal": e, 
+	# 	"red box":"R", "green box":"G", "blue box":"B", 
+	# 	"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
+	# 	"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
+	# 	"corridor":[9,15]
+	# })
 
 	# res = a.learned_actions["noop"]
 

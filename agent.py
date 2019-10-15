@@ -41,13 +41,19 @@ class bot:
 	def proccessAnswer(self,line,args):
 		s = self.getAnswer(line)
 
-		while ' & ' in s:
-			splits = s.split(' & ')
-			answer = self.getAnswer(splits[1])
-			s = "{} &and& {}".format(splits[0],answer)
+		tmp = []
+
+		# while ' & ' in s:
+		while "line" in self.last_response["result"]["parameters"] and len(self.last_response["result"]["parameters"]["line"]):
+			command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
+			# splits = s.split(' & ')
+			# answer = self.getAnswer(splits[1])
+			s = self.getAnswer(self.last_response["result"]["parameters"]["line"])
+			# s = "{} &and& {}".format(command,answer)
+			tmp.append(command)
 
 		print (s)
-		# print (self.last_response)
+		print (self.last_response)
 		
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")
@@ -80,8 +86,12 @@ class bot:
 			elif self.last_response["result"]["metadata"]["intentName"] == "as Logic":
 				#command = command.replace(" and ","___").replace(" &and& ", " and ").replace(",","")
 				command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
-				
-				r = self.agent.createNew(self.pending_line, command, args)
+				expr = ' and '.join(tmp+[command])
+
+				print (expr)
+
+				# r = self.agent.createNew(self.pending_line, command, args)
+				r = self.agent.createNew(self.pending_line, expr, args)
 				
 				self.pending_line = None
 				self.name = None

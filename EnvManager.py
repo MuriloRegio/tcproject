@@ -84,7 +84,7 @@ def pick(obj, env):
 	return (obj, was)
 
 def Contract_pick():
-	return {"pre" : "hands_free and at ?coord self and is close(?coord, ?dest) and at ?dest ?obj",
+	return {"pre" : "hands_free and current ?coord self and is close(?coord, ?dest) and at ?dest ?obj",
 			"pos" : "not hands_free and has ?obj and not at ?dest ?obj"}
 
 def pickDict():
@@ -112,17 +112,37 @@ def drop(dest, env):
 	
 	return (obj, dest)
 
-def Contract_drop():
-	return {"pre" : "has ?obj and at ?coord self and is close(?coord, ?dest) and is free(?dest)",
-			"pos" : "hands_free and not has ?obj and not is free(?dest) and at ?dest ?obj"}
+def Contract_drop(direction):
+	return {"pre" : "has ?obj and current ?coord self and is free(?dest) and current ?dest {0}-self".format(direction),
+			"pos" : "hands_free and not has ?obj and not is free(?dest) and at ?dest ?obj".format(direction)}
 
-def dropDict():
+def dropDict(direction):
 	return {
-				"step":"drop(dest___,env___)",
-			"contract":Contract_drop(),
+				"step":"drop_{}(env___)".format(direction),
+			"contract":Contract_drop(direction),
 				 "par":"dest,env",
-				"name":"drop",
+				"name":"drop_{}".format(direction),
 			}
+
+def drop_up(env):
+	env["facing"] = 'up'
+	dest = front(env)
+	return drop(dest, env)
+
+def drop_left(env):
+	env["facing"] = 'left'
+	dest = front(env)
+	return drop(dest, env)
+
+def drop_right(env):
+	env["facing"] = 'right'
+	dest = front(env)
+	return drop(dest, env)
+
+def drop_down(env):
+	env["facing"] = 'down'
+	dest = front(env)
+	return drop(dest, env)
 #================================================================================
 
 #================================================================================
@@ -137,11 +157,11 @@ def step(env, direction):
 	return was
 
 def Contract_step(direction):
-	return {"pre" : "at ?coord self and is free(?coord_{0}) and current ?coord_left left-self and current ?coord_up up-self \
+	return {"pre" : "current ?coord self and is free(?coord_{0}) and current ?coord_left left-self and current ?coord_up up-self \
 						and current ?coord_right right-self and current ?coord_down down-self".format(direction).replace("\t",""),
-			"pos" : "at {0}(?coord) self and current {0}(?coord_left) left-self and current {0}(?coord_up) up-self and \
+			"pos" : "current {0}(?coord) self and current {0}(?coord_left) left-self and current {0}(?coord_up) up-self and \
 						current {0}(?coord_right) right-self and current {0}(?coord_down) down-self and \
-						not at ?coord self and not current ?coord_left left-self and not current ?coord_up up-self \
+						not current ?coord self and not current ?coord_left left-self and not current ?coord_up up-self \
 						and not current ?coord_right right-self and not current ?coord_down down-self".format(direction).replace("\t","")}
 
 def stepDict(direction):

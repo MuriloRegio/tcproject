@@ -135,11 +135,11 @@ class env:
 		def update(*args):
 			# print (args)
 			l = apply(eval("em."+command),*args)
-			if command == "pick":
+			if "pick" in command:
 				obj, coord = l
 				self.update(coord, 255)
-				self.update(self.env["self"], self.stickman*self.colors[obj])
-			elif command == "drop":
+				# self.update(self.env["self"], self.stickman*self.colors[obj])
+			elif "drop" in command:
 				obj, coord = l
 				self.update(coord, self.colors[obj])
 				self.update(self.env["self"], self.stickman)
@@ -163,7 +163,7 @@ class env:
 		self.st[x:x+self.img_scale, y:y+self.img_scale] = value
 		
 	def statefy(self):
-		state = "at {} self".format(self.env["self"])
+		state = "current {} self".format(self.env["self"])
 
 		for obj, coord in self.env["objects"].items():
 			state += " and at {} {}".format(list(coord),obj)
@@ -194,7 +194,7 @@ class env:
 			# print (slots[1])
 			# print (self.env["coordinates"])
 			# print (self.env["coordinates"][slots[1]])
-			slots[1]  = "{}".format(self.env["coordinates"][slots[1]]).replace(' ','')
+			slots[1]  = "{}".format(slots[1] if slots[1] not in self.env["coordinates"] else self.env["coordinates"][slots[1]]).replace(' ','')
 			splits[i] = rewrite(slots)
 
 		return ' and '.join(splits)
@@ -260,9 +260,11 @@ def run(GUI, e):
 
 	a = ActionMaker(
 			{
-				"step_down":  em.stepDict('down'), "step_up":    em.stepDict('up'), 
-				"step_right":em.stepDict('right'), "step_left":em.stepDict('left'), 
-				"pick" :            em.pickDict(), "drop":           em.dropDict()
+				"step_down" :  em.stepDict('down'), "step_up"   :    em.stepDict('up'), 
+				"step_right": em.stepDict('right'), "step_left" :  em.stepDict('left'), 
+				"pick" 		:        em.pickDict(),
+				"drop_down" :  em.dropDict('down'), "drop_up"   :	em.dropDict('up'), 
+				"drop_right": em.dropDict('right'), "drop_left" :  em.dropDict('left')
 			},
 			{
 				"step_down"  : e.run("step_down"), 
@@ -270,7 +272,10 @@ def run(GUI, e):
 				"step_left"  : e.run("step_left"), 
 				"step_up"    : e.run("step_up"), 
 				"pick"       : e.run("pick"), 
-				"drop"       : e.run("drop"), 
+				"drop_down"	 : e.run("drop_down"), 
+				"drop_right" : e.run("drop_right"), 
+				"drop_left"	 : e.run("drop_left"), 
+				"drop_up"	 : e.run("drop_up")
 			},
 			logical_functions = functions
 		)
@@ -284,20 +289,26 @@ def run(GUI, e):
 	e.args = {
 		"env":e.env, "statefier":e.statefy, "formatGoal": e, 
 		"red box":"R", "green box":"G", "blue box":"B", 
-		"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
-		"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
-		"corridor":[9,15]
+		"room_1":"[1,2]","room_2":"[1,6]","room_3":"[1,10]",
+		"room_4":"[5,2]","room_5":"[5,6]","room_6":"[5,10]",
+		"corridor":"[3,6]"
 	}
 
 	e.env["coordinates"] = {
-		"room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
-		"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
-		"corridor":[9,15]
+		# "room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
+		# "room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
+		# "corridor":[9,15]
 	}
 
 	for obj, coord in e.env["objects"].items():
-		e.env["coordinates"][obj] = coord
+		e.env["coordinates"][obj] = list(coord)
 
+
+	# pending.append("can you swap the red box and the green box positions?")
+	# pending.append("the green box is at the red box's place and the red box is at the green box place")
+
+	# pending.append("can you place the green box on the bottom room?")
+	# pending.append("the green box is on the bottom room")
 
 	while 1:
 		time.sleep(1)
@@ -306,6 +317,9 @@ def run(GUI, e):
 			del pending[0]
 
 			agt.proccessAnswer(msg,e.args)
+
+		# import sys
+		# sys.exit(0)
 
 
 if __name__ == "__main__":
