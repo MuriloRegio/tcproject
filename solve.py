@@ -381,7 +381,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals):
 # 	#add case of failure, what was the closest it got
 # 	return (False,[[]])
 
-def clauseListToDictList(act,clauses):
+def clauseListToDictList(act,clauses, informed_pars=None):
 	from re import sub
 
 	bindings = {}
@@ -472,11 +472,26 @@ def clauseListToDictList(act,clauses):
 
 		steps["distinct"] = []
 
-	dDict["par"] = ','.join([
-			x for x in dDict["par"].split(",") 
-			if x not in del_pars and x+'___' in dDict["step"]
-		]
-	)
+
+	pars_splits = dDict["par"].split(",")
+
+
+	matching_pars = -1 if informed_pars is None else\
+		len(
+			[True for x in informed_pars if x in pars_splits or not len(x)]
+		)
+
+	if matching_pars < len(pars_splits):
+		pars_splits = [
+				x for x in pars_splits 
+				if x not in del_pars and x+'___' in dDict["step"]
+			]
+
+	else:
+		pad = ["pad{}".format(i) for i in range(matching_pars-len(pars_splits))]
+		pars_splits+= pad
+	dDict["par"] = ','.join(pars_splits)
+
 
 	### Check to remove conditions that don't appear on the parameters
 	for contType in dDict["contract"]:
@@ -576,7 +591,8 @@ if __name__ == "__main__":
 	actions = [pu,u,d,l,r,du,dd,dl,dr]
 
 	print (e.statefy())
-	places = "{}-{}".format(list(e.env["objects"]["R"]), list(e.env["objects"]["G"])).replace(' ','').split('-')
+	places = "{}-{}".format([1,6], [1,10]).replace(' ','').split('-')
+	# places = "{}-{}".format(list(e.env["objects"]["R"]), list(e.env["objects"]["G"])).replace(' ','').split('-')
 	target = "at {} G and at {} R".format(places[0],places[1])
 	# target = "at [3,25] G"
 
@@ -590,7 +606,7 @@ if __name__ == "__main__":
 	# sys.stdout=tmp
 	# dump.close()
 
-	print (plan)
+	# print (plan)
 
 	if plan[0]:
 		plan = plan[1]

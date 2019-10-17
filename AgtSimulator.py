@@ -146,6 +146,8 @@ class env:
 			else:
 				self.update(l, 255)
 				self.update(self.env["self"], self.stickman)
+
+			print (self.statefy())
 			
 			# cv2.imshow("Environment State", self.st)
 			time.sleep(1)
@@ -194,7 +196,9 @@ class env:
 			# print (slots[1])
 			# print (self.env["coordinates"])
 			# print (self.env["coordinates"][slots[1]])
-			slots[1]  = "{}".format(slots[1] if slots[1] not in self.env["coordinates"] else self.env["coordinates"][slots[1]]).replace(' ','')
+			# print (line, self.env['objects'])
+			slots[1]  = "{}".format(slots[1] if slots[1] not in self.env["objects"] else\
+						 list(self.env["objects"][slots[1]])).replace(' ','')
 			splits[i] = rewrite(slots)
 
 		return ' and '.join(splits)
@@ -294,21 +298,12 @@ def run(GUI, e):
 		"corridor":"[3,6]"
 	}
 
-	e.env["coordinates"] = {
-		# "room_1":[3,5],"room_2":[3,15],"room_3":[3,25],
-		# "room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
-		# "corridor":[9,15]
-	}
 
-	for obj, coord in e.env["objects"].items():
-		e.env["coordinates"][obj] = list(coord)
+	pending.append("can you place the green box on the bottom room?")
+	pending.append("the green box is on the bottom room")
 
-
-	# pending.append("can you swap the red box and the green box positions?")
-	# pending.append("the green box is at the red box's place and the red box is at the green box place")
-
-	# pending.append("can you place the green box on the bottom room?")
-	# pending.append("the green box is on the bottom room")
+	pending.append("can you swap the red box and the green box positions?")
+	pending.append("the green box is at the red box's place and the red box is at the green box place")
 
 	while 1:
 		time.sleep(1)

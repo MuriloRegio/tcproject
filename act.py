@@ -179,7 +179,9 @@ class ActionMaker():
 		goal = args["formatGoal"].formatGoal(goal)
 		s0   = args["statefier"]()
 
-		found,plan = self.findPlan(s0,goal)
+		max_pars = list(args)+ [""]*(len(line.split('___'))-1)
+
+		found,plan = self.findPlan(s0,goal, informed_pars=max_pars)
 
 		if found:
 			aName = line[:line.index('_')]
@@ -195,7 +197,7 @@ class ActionMaker():
 
 		return None
 
-	def findPlan(self,s0,goal):
+	def findPlan(self,s0,goal,informed_pars=None):
 		import solve
 		target = solve.Clause("goal",goal,"")
 
@@ -218,12 +220,13 @@ class ActionMaker():
 
 		found, plan = solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
 
-		return found, (None if not found else solve.clauseListToDictList(self,plan))
+		return found, (None if not found else solve.clauseListToDictList(self,plan,informed_pars))
 
 	def execute(self,line,args):
 	# def execute(self,line,env):
 		pars = line.split("___")
 		command = pars[0]
+		max_informed_pars = list(args)+[""]*(len(pars)-1)
 		
 		fdict = self.toFunction(command)
 
@@ -281,7 +284,7 @@ class ActionMaker():
 		if fdict["contract"] is None:
 			return None
 
-		return self.runDict(fdict,var,env,statefier)
+		return self.runDict(fdict,var,env,statefier, informed_pars=max_informed_pars)
 
 
 	def getContract(self,incompleteContract,state):
@@ -356,7 +359,7 @@ class ActionMaker():
 					break
 
 			if not f:
-				input(step,possibilities)
+				input((step,possibilities))
 				return False
 
 		# print (goal, state)
@@ -365,7 +368,7 @@ class ActionMaker():
 			input(goal.applicable(state))
 		return goal.applicable(state)
 
-	def runDict(self,funcDict,var,env,statefier):
+	def runDict(self,funcDict,var,env,statefier, informed_pars=None):
 		steps = funcDict["step"].replace(" ","").split(";")
 
 		for i,line in enumerate(steps):
@@ -378,8 +381,8 @@ class ActionMaker():
 			# input(applicable)
 			
 			if not applicable:
-				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"])
-				return found if not found else self.runDict(new_plan, var, env, statefier)
+				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"], informed_pars=informed_pars)
+				return found if not found else self.runDict(new_plan, var, env, statefier, informed_pars=informed_pars)
 
 			if '=' in line:
 				assign, command = line.split("=")
