@@ -1,0 +1,1 @@
+https://github.com/dialogflow/dialogflow-python-client
