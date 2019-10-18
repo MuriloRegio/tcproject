@@ -197,22 +197,23 @@ class ActionMaker():
 
 		return None
 
-	def findPlan(self,s0,goal,informed_pars=None):
+	def findPlan(self,s0,goal,informed_pars=None, changed_action=None):
 		import solve
 		target = solve.Clause("goal",goal,"")
 
 		clauses = []
 
-		l_append = lambda dict : map(lambda f_d : clauses.append(
-						solve.dict2clause(f_d[1],functions=self.logical_functions)
-					), 
-					dict.items()
-				)
+		l_append = lambda dict : [clauses.append(
+							solve.dict2clause(d,functions=self.logical_functions)
+						)
+					for f,d in dict.items() if f != changed_action
+				]
+				
 		
 		l_append(self.known_actions)
 		l_append(self.learned_actions)
 
-		assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
+		# assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
 
 		print(s0)
 		print(goal)
@@ -240,8 +241,9 @@ class ActionMaker():
 		env = args['env']
 		statefier = args['statefier']
 		# print (args)
-		par = [y for p in fdict['par'].split(',') for x,y in args.items() if x==p]\
-			 + [y for p in pars[1:] for x,y in args.items() if x==p]
+		# par = [y for p in fdict['par'].split(',') for x,y in args.items() if x==p]\
+		# 	 + [y for p in pars[1:] for x,y in args.items() if x==p]
+		par = [y for p1,p2 in zip(fdict['par'].split(','), pars[1:]) for x,y in args.items() if x==p1 or x==p2]
 
 		# args = [env(label) for label in fdict["par"].split(',')]
 
@@ -338,6 +340,7 @@ class ActionMaker():
 
 				tmp.append(('?'+par[:-3],vars[var[:-3]]))
 
+			# input (c)
 			possibilities = c.ground(state,axis=1,restrictions=tmp)
 			# print (len(possibilities), c.name)
 			# [[possibilities.append(x) for x in tmp.ground(state,axis=1)] for tmp in c.ground(goal)]
@@ -359,7 +362,8 @@ class ActionMaker():
 					break
 
 			if not f:
-				input((step,possibilities))
+				print ('==========')
+				input((step,[str(p) for p in possibilities]))
 				return False
 
 		# print (goal, state)
@@ -381,7 +385,7 @@ class ActionMaker():
 			# input(applicable)
 			
 			if not applicable:
-				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"], informed_pars=informed_pars)
+				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"], informed_pars=informed_pars, changed_action=funcDict["name"])
 				return found if not found else self.runDict(new_plan, var, env, statefier, informed_pars=informed_pars)
 
 			if '=' in line:

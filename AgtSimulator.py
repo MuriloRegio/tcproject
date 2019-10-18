@@ -299,11 +299,11 @@ def run(GUI, e):
 	}
 
 
-	pending.append("can you place the green box on the bottom room?")
-	pending.append("the green box is on the bottom room")
+	# pending.append("can you place the green box on the bottom room?")
+	# pending.append("the green box is on the bottom room")
 
 	pending.append("can you swap the red box and the green box positions?")
-	pending.append("the green box is at the red box's place and the red box is at the green box place")
+	# pending.append("the green box is at the red box's place and the red box is at the green box place")
 
 	while 1:
 		time.sleep(1)

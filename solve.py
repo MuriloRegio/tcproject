@@ -521,7 +521,7 @@ def clauseListToDictList(act,clauses, informed_pars=None):
 	conditions = dDict["contract"]["pos"].split(" and ")
 	for i,c in reversed(enumerate(conditions)):
 		for token in c.split(' '):
-			print (token, token in tokens, end='---')
+			# print (token, token in tokens, end='---')
 			if '?' in token and token not in tokens:
 				del conditions[i]
 				break
