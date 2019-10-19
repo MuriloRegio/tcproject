@@ -1,4 +1,5 @@
 from OLD import *
+from copy import copy
 from PIL import Image
 import os
 
@@ -167,13 +168,23 @@ class ActionMaker():
 		return ret_d
 
 	def toFunction(self,op):
-		try:
-			return self.known_actions[op]
-		except:
-			try:
-				return self.learned_actions[op]
-			except:
-				return None
+		# try:
+		# 	return self.known_actions[op]
+		# except:
+		# 	try:
+		# 		return self.learned_actions[op]
+		# 	except:
+		# 		return None
+
+		if op in self.known_actions:
+			ret = self.known_actions[op]
+		elif op in self.learned_actions:
+			ret = self.learned_actions[op]
+		else:
+			return None
+
+		return copy(ret)
+
 
 	def createNew(self,line,goal,args):
 		goal = args["formatGoal"].formatGoal(goal)
@@ -215,8 +226,8 @@ class ActionMaker():
 
 		# assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
 
-		print(s0)
-		print(goal)
+		# print(s0)
+		# print(goal)
 		# input()
 
 		found, plan = solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
@@ -249,45 +260,94 @@ class ActionMaker():
 
 		pars = fdict["par"].split(",")
 
-		print (pars, par)
+		# print (pars, par)
 
 		assert len(par) == len(pars)
 		# print (statefier())
 		# print (funcDict['step'])
 		# input(funcDict["contract"]["pos"])
 
-		var = {}
+		# var = {}
 
-		tmp_pre = fdict["contract"]["pre"].split(' ')
-		tmp_pos = fdict["contract"]["pos"].split(' ')
+		# tmp_pre = fdict["contract"]["pre"].split(' ')
+		# tmp_pos = fdict["contract"]["pos"].split(' ')
 
-		for label,val in zip(pars,par):
-			var[label] = val
+		# for label,val in zip(pars,par):
+		# 	var[label] = val
 
-			k = "?{}".format(label)
-			for i,token in enumerate(tmp_pre):
-				if token == k:
-					tmp_pre[i] = "{0}".format(val).replace(" ","") # Spaces are evil
-			for i,token in enumerate(tmp_pos):
-				if token == k:
-					tmp_pos[i] = "{0}".format(val).replace(" ","") # Spaces are evil
-			# if k in tmp_pre:
-			# 	tmp_pre = tmp_pre.replace(k, "{0}").format(val)
-			# if k in tmp_pos:
-			# 	tmp_pos = tmp_pos.replace(k, "{0}").format(val)
-				# tmp_pos = tmp_pos.replace(k, "{}")
-				# print (tmp_pos, val)
+		# 	k = "?{}".format(label)
+		# 	for i,token in enumerate(tmp_pre):
+		# 		if token == k:
+		# 			tmp_pre[i] = "{0}".format(val).replace(" ","") # Spaces are evil
+		# 	for i,token in enumerate(tmp_pos):
+		# 		if token == k:
+		# 			tmp_pos[i] = "{0}".format(val).replace(" ","") # Spaces are evil
+		# 	# if k in tmp_pre:
+		# 	# 	tmp_pre = tmp_pre.replace(k, "{0}").format(val)
+		# 	# if k in tmp_pos:
+		# 	# 	tmp_pos = tmp_pos.replace(k, "{0}").format(val)
+		# 		# tmp_pos = tmp_pos.replace(k, "{}")
+		# 		# print (tmp_pos, val)
 
-		fdict["contract"]["pre"] = ' '.join(tmp_pre)
-		fdict["contract"]["pos"] = ' '.join(tmp_pos)
+		# fdict["contract"]["pre"] = ' '.join(tmp_pre)
+		# fdict["contract"]["pos"] = ' '.join(tmp_pos)
 
-		fdict["contract"] = self.getContract(fdict,statefier())
+		# fdict["contract"] = self.getContract(fdict,statefier())
 
-		if fdict["contract"] is None:
-			return None
+		# if fdict["contract"] is None:
+		# 	return None
 
-		return self.runDict(fdict,var,env,statefier, informed_pars=max_informed_pars)
+		return self.match_params(pars,par,fdict,statefier,env, informed_pars=max_informed_pars)
+		# return self.runDict(fdict,var,env,statefier, informed_pars=max_informed_pars)
 
+
+	def match_params(self,keys,values,fdict, statefier, env, informed_pars=None):
+		from itertools import permutations
+
+		split_pre = fdict["contract"]["pre"].split(' ')
+		split_pos = fdict["contract"]["pos"].split(' ')
+		steps = fdict["step"].split(";")
+
+		state = statefier()
+
+		f = 0
+
+		for possibility in permutations(values, len(keys)):
+			tmp_dict = copy(fdict)
+			tmp_bind = {}
+
+			tmp_pre = copy(split_pre)
+			tmp_pos = copy(split_pos)
+
+			for label,val in zip(keys,possibility):
+				tmp_bind[label] = val
+
+				k = "?{}".format(label)
+				for i,token in enumerate(tmp_pre):
+					if token == k:
+						tmp_pre[i] = "{0}".format(val).replace(" ","") # Spaces are evil
+				for i,token in enumerate(tmp_pos):
+					if token == k:
+						tmp_pos[i] = "{0}".format(val).replace(" ","") # Spaces are evil
+
+			tmp_dict["contract"]["pre"] = ' '.join(tmp_pre)
+			tmp_dict["contract"]["pos"] = ' '.join(tmp_pos)
+
+			try:
+				tmp_dict["contract"] = self.getContract(fdict,statefier())
+				a = self.simulate(state,steps,tmp_dict["contract"]["pos"],tmp_bind)
+			except:
+				a = False
+
+			if a:
+				f = 1
+				break
+
+		if not f:
+			found, new_plan = self.findPlan(state, fdict["contract"]["pos"], informed_pars=informed_pars, changed_action=fdict["name"])
+			return found if not found else self.match_params(keys,values,new_plan, statefier, env, informed_pars=informed_pars)
+
+		return self.runDict(tmp_dict,tmp_bind,env,statefier,informed_pars=informed_pars)
 
 	def getContract(self,incompleteContract,state):
 		from solve import dict2clause, toSet
@@ -297,8 +357,8 @@ class ActionMaker():
 
 		possibilities = c.ground(state,axis=1)
 
-		print (c)
-		print (c.getPossibleBindings(state,axis=1))
+		# print (c)
+		# print (c.getPossibleBindings(state,axis=1))
 
 		if not len(possibilities):
 			return None
@@ -362,14 +422,14 @@ class ActionMaker():
 					break
 
 			if not f:
-				print ('==========')
-				input((step,[str(p) for p in possibilities]))
+				# print ('==========')
+				# input((step,[str(p) for p in possibilities]))
 				return False
 
 		# print (goal, state)
 		# print(goal.__str__(),state)
-		if not goal.applicable(state):
-			input(goal.applicable(state))
+		# if not goal.applicable(state):
+		# 	input(goal.applicable(state))
 		return goal.applicable(state)
 
 	def runDict(self,funcDict,var,env,statefier, informed_pars=None):
@@ -386,7 +446,8 @@ class ActionMaker():
 			
 			if not applicable:
 				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"], informed_pars=informed_pars, changed_action=funcDict["name"])
-				return found if not found else self.runDict(new_plan, var, env, statefier, informed_pars=informed_pars)
+				# return found if not found else self.runDict(new_plan, var, env, statefier, informed_pars=informed_pars)
+				return found if not found else self.match_params(new_plan["par"].split(','), list(var.values()), new_plan, statefier, env, informed_pars=informed_pars)
 
 			if '=' in line:
 				assign, command = line.split("=")
@@ -451,7 +512,7 @@ if __name__ == "__main__":
 		)
 
 	e.formatGoal = lambda x : x
-	# a.createNew("noop___red_box", "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
+	a.createNew("noop___red_box", "has R", {"env":e.env, "statefier":e.statefy, "formatGoal": e, "red_box":"R"})
 	# a.execute('place___red box___room_5',args = {
 	# 	"env":e.env, "statefier":e.statefy, "formatGoal": e, 
 	# 	"red box":"R", "green box":"G", "blue box":"B", 
@@ -469,3 +530,6 @@ if __name__ == "__main__":
 
 	# if res!=None:
 	# 	print ('->',res)
+
+	if "noop" in a.learned_actions:
+		print ('->',a.learned_actions["noop"])

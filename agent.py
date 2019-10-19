@@ -52,8 +52,8 @@ class bot:
 			# s = "{} &and& {}".format(command,answer)
 			tmp.append(command)
 
-		print (s)
-		print (self.last_response)
+		# print (s)
+		# print (self.last_response)
 		
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")
@@ -88,7 +88,7 @@ class bot:
 				command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
 				expr = ' and '.join(tmp+[command])
 
-				print (expr)
+				# print (expr)
 
 				# r = self.agent.createNew(self.pending_line, command, args)
 				r = self.agent.createNew(self.pending_line, expr, args)

@@ -41,8 +41,8 @@ def h(actions, initial_state, positive_goals, negative_goals):
 				# else:
 				# 	for g in subgrounds:
 				# 		new_state = new_state.union(g.pos_pos)
-			print ("{}/{} -- {}".format(j,i, a.name))
-		print ('')
+		# 	print ("{}/{} -- {}".format(j,i, a.name))
+		# print ('')
 
 		if len(state) == len(new_state):
 			return float("inf")
@@ -68,7 +68,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 
 	count = 0
 	states.put((0,0,initial_state,[]))
-	print (target)
+	# print (target)
 	import time
 	start = time.time()
 
@@ -79,8 +79,8 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 		# 	print (state)
 
 		if target.applicable(state):
-			print ('LEAVING FROM SUCCESS')
-			print ("took {:.3f}s".format(time.time()-start))
+			# print ('LEAVING FROM SUCCESS')
+			# print ("took {:.3f}s".format(time.time()-start))
 			return (True,plan)
 
 		possible_actions = []
@@ -111,7 +111,7 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 
 			# print ('===================================')
 			# print (state,a.state,sep='\n')
-			print ('-->', a.name, '<--')
+			# print ('-->', a.name, '<--')
 			# print ('Old ->', a.pos_pos)
 			# print ('New ->', a.neg_pos)
 			# print ('From ->', state)
@@ -144,10 +144,10 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 			new_plan = plan + [a]
 			states.put((new_cost,count,new_state,new_plan))
 		# input('')
-		print('{}-cycle done'.format(count), states.qsize(), len(explored), sep='\t\t')
+		# print('{}-cycle done'.format(count), states.qsize(), len(explored), sep='\t\t')
 		# input('')
 
-	print ("took {:.3f}s".format(time.time()-start))
+	# print ("took {:.3f}s".format(time.time()-start))
 	# print ('LEAVING FROM FAILURE')
 	#add case of failure, what was the closest it got
 	return (False,[[]])

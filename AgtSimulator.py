@@ -71,7 +71,8 @@ class GUI:
 				for m in msg.split("\\n"):
 					self.send(custom_msg=m)
 			else:
-				print (type(msg))
+				# print (type(msg))
+				pass
 		except queue.Empty:
 			pass
 		self.top.after(100, self.process_queue)
@@ -147,7 +148,7 @@ class env:
 				self.update(l, 255)
 				self.update(self.env["self"], self.stickman)
 
-			print (self.statefy())
+			# print (self.statefy())
 			
 			# cv2.imshow("Environment State", self.st)
 			time.sleep(1)
@@ -302,7 +303,7 @@ def run(GUI, e):
 	# pending.append("can you place the green box on the bottom room?")
 	# pending.append("the green box is on the bottom room")
 
-	pending.append("can you swap the red box and the green box positions?")
+	# pending.append("can you swap the red box and the green box positions?")
 	# pending.append("the green box is at the red box's place and the red box is at the green box place")
 
 	while 1:
