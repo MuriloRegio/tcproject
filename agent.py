@@ -39,9 +39,18 @@ class bot:
 		[self.channel.put(x) for x in message.split('\n')]
 
 	def proccessAnswer(self,line,args):
-		s = self.getAnswer(line)
+		s = ""
+		tmp = []
+
+		for l in line.split("."):
+			tmp.append(self.getAnswer(l))
+		s = '\n'.join(tmp)
 
 		tmp = []
+
+		if "parameters" not in self.last_response["result"]:
+			self.send(s)
+			return
 
 		# while "line" in self.last_response["result"]["parameters"] and len(self.last_response["result"]["parameters"]["line"]):
 		if self.last_response["result"]["metadata"]["intentName"] == "as Logic":
