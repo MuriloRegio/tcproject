@@ -1,14 +1,9 @@
 from OLD import *
 import numpy as np
 
-try:
-	from tkinter import *
-	import tkinter.messagebox
-except:
-	from Tkinter import *
-	import tkMessageBox
+from tkinter import *
+# import tkinter.messagebox
 
-from OLD import *
 from PIL import Image, ImageTk
 import EnvManager as em
 import time
@@ -16,16 +11,17 @@ import time
 import queue
 
 class GUI:
-	def __init__(self, env):
+	def __init__(self, env, verbose=False):
 		self.env = env
 		self.pending = []
 		self.queue = queue.Queue()
+		self.verbose = verbose
 
 		gui_dims = map(lambda x : x * env.img_scale, env.size)
 
 		self.mGui = Tk()
 		self.mGui.title('Environment Perception')
-		# self.mGui.geometry('x'.join(map(str,gui_dims)))
+		
 		photoFrame = Frame(self.mGui, bg="black", width=gui_dims[1], height=gui_dims[0])
 		photoFrame.pack()
 		self.label2 = Label(photoFrame)
@@ -63,6 +59,19 @@ class GUI:
 
 		self.top.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
+		if verbose:
+			self.logger = Tk()
+			self.logger.title("Log")
+			messages_frame = Frame(self.logger)
+			scrollbar = Scrollbar(messages_frame)  # To navigate through past messages.
+			# Following will contain the messages.
+			self.log_list = Listbox(messages_frame, height=15, width=50, yscrollcommand=scrollbar.set)
+			scrollbar.pack(side=RIGHT, fill=Y)
+			self.log_list.pack(side=LEFT, fill=BOTH)
+			self.log_list.pack()
+			messages_frame.pack()
+
+
 	def process_queue(self):
 		try:
 			msg = self.queue.get(0)
@@ -70,8 +79,11 @@ class GUI:
 			if type(msg) is str:
 				for m in msg.split("\\n"):
 					self.send(custom_msg=m)
+			elif type(msg) is tuple:
+				if self.verbose:
+					self.log(msg)
+				## TODO aux msg_list bpx for internal actions
 			else:
-				# print (type(msg))
 				pass
 		except queue.Empty:
 			pass
@@ -101,13 +113,23 @@ class GUI:
 		self.msg_list.yview(END)                                  	#Set the scrollbar to the end of the listbox
 		self.msg_list.pack()
 
+	def log(self, logEntry):  # event is passed by binders.
+		"""Handles sending of messages."""
+		# event, values = logEntry
+
+		msg = "({}) ::= {}".format(*logEntry)
+		self.log_list.insert(END,msg)
+
+		self.log_list.yview(END)                                  	#Set the scrollbar to the end of the listbox
+		self.log_list.pack()
+
 	def update_img(self):
 		tk_image = ImageTk.PhotoImage(Image.fromarray(self.env.st))
 		h_box, w_box = self.env.st.shape[:2]
 
 		self.label2.config(image=tk_image, width=w_box, height=h_box)
 		self.label2.tk_image = tk_image
-		# self.label2.tk_image = ImageTk.PhotoImage(pil_image_resized)
+
 		self.label2.config(image=self.label2.tk_image, width=w_box, height=h_box)
 		self.label2.pack()
 		self.top.after(100, self.update_img)
@@ -131,15 +153,18 @@ class env:
 		self.stickman = np.expand_dims(self.stickman,2)
 
 		self.draw()
+
+		self.channel = None
 		
 	def run(self, command):
 		def update(*args):
-			# print (args)
+			if self.channel is not None:
+				self.channel.put(("Action", command))
+
 			l = apply(eval("em."+command),*args)
 			if "pick" in command:
 				obj, coord = l
 				self.update(coord, 255)
-				# self.update(self.env["self"], self.stickman*self.colors[obj])
 			elif "drop" in command:
 				obj, coord = l
 				self.update(coord, self.colors[obj])
@@ -148,17 +173,9 @@ class env:
 				self.update(l, 255)
 				self.update(self.env["self"], self.stickman)
 
-			# print (self.statefy())
-			
-			# cv2.imshow("Environment State", self.st)
 			time.sleep(1)
 			return l
 		return update
-
-	def __call__(self,arg, local = None):
-		if local is not None and arg is str and arg in local:
-			return local[arg]
-		return self.envQuery(arg)
 
 	def update(self, seed, value):
 		x,y = map(lambda x : self.img_scale*x, seed)
@@ -194,10 +211,6 @@ class env:
 				continue
 
 			slots[1]  = slots[1] if slots[1] not in self.args else str(self.args[slots[1]])
-			# print (slots[1])
-			# print (self.env["coordinates"])
-			# print (self.env["coordinates"][slots[1]])
-			# print (line, self.env['objects'])
 			slots[1]  = "{}".format(slots[1] if slots[1] not in self.env["objects"] else\
 						 list(self.env["objects"][slots[1]])).replace(' ','')
 			splits[i] = rewrite(slots)
@@ -244,7 +257,6 @@ class env:
 
 				else:
 					value = self.colors[cellType]
-					# continue
 
 				x, y = i*self.img_scale, j*self.img_scale
 				self.st[x:x+self.img_scale,y:y+self.img_scale] = value
@@ -314,16 +326,21 @@ def run(GUI, e):
 
 			agt.proccessAnswer(msg,e.args)
 
-		# import sys
-		# sys.exit(0)
-
 
 if __name__ == "__main__":
+	import sys
+	args = sys.argv[1:]
+
+	verbose = len(args)
+
 	e = env()
-	gui = GUI(e)
+	gui = GUI(e, verbose=verbose)
+
+	if verbose:
+		e.channel = gui.queue
+
 
 	import _thread
 	_thread.start_new_thread(run, tuple([gui, e]))
-	# _thread.start_new_thread(test, tuple([]))
 
 	gui.mGui.mainloop()

@@ -43,18 +43,14 @@ class bot:
 
 		tmp = []
 
-		# while ' & ' in s:
-		while "line" in self.last_response["result"]["parameters"] and len(self.last_response["result"]["parameters"]["line"]):
-			command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
-			# splits = s.split(' & ')
-			# answer = self.getAnswer(splits[1])
-			s = self.getAnswer(self.last_response["result"]["parameters"]["line"])
-			# s = "{} &and& {}".format(command,answer)
-			tmp.append(command)
+		# while "line" in self.last_response["result"]["parameters"] and len(self.last_response["result"]["parameters"]["line"]):
+		if self.last_response["result"]["metadata"]["intentName"] == "as Logic":
+			expr = ','.join(line.split(" and "))
+			for expr in expr.split(','):
+				s = self.getAnswer(expr)
+				command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
+				tmp.append(command)
 
-		# print (s)
-		# print (self.last_response)
-		
 		if len(s)==0:
 			s = self.getAnswer("_-_-DEU RUIM-_-_")
 			self.send(s)
@@ -62,35 +58,30 @@ class bot:
 
 		s = s.split("|")
 
-		try:
+		if "Unknown" in self.last_response["result"]["parameters"]:
 			if self.last_response["result"]["parameters"]["Unknown"].replace(" ","") in self.agent.learned_actions:
 				s[-1] = "Sure, i'll try it"
-		except:
-			pass
 
-		# self.channel.put(s[-1])
 		self.send(s[-1])
 		r = None
 
 		if len(s) == 2:
-			#command  = s[0]
-			
 			if self.last_response["result"]["metadata"]["intentName"] == "Identify unknown":
-				#command = command.replace(" and ","___").replace(", ","___").replace(" ","")
 				command = '___'.join([self.last_response["result"]["parameters"]["Action"]+self.last_response["result"]["parameters"]["Unknown"]]+self.last_response["result"]["parameters"]["Target"])
+				
+				self.channel.put(("Interpretation", command))
 				r = self.agent.execute(command,args)
 
 				if r is None:
 					self.pending_line = command
 
 			elif self.last_response["result"]["metadata"]["intentName"] == "as Logic":
-				#command = command.replace(" and ","___").replace(" &and& ", " and ").replace(",","")
 				command = '___'.join([self.last_response["result"]["parameters"]["op"]]+list(reversed(self.last_response["result"]["parameters"]["Target"])))
+				
 				expr = ' and '.join(tmp+[command])
+				for l in expr.split(" and "):
+					self.channel.put(("Interpretation", l))
 
-				# print (expr)
-
-				# r = self.agent.createNew(self.pending_line, command, args)
 				r = self.agent.createNew(self.pending_line, expr, args)
 				
 				self.pending_line = None
@@ -99,11 +90,9 @@ class bot:
 		if r is not None:
 			self.channel.put(r)
 			self.send("Ok, done")
-			# self.channel.put("Ok, done")
 
 		elif len(s) == 2 and self.pending_line is None:
 			self.send("I failed you.")
-			# self.channel.put("I failed you.")
 
 if __name__ == '__main__':
 	import queue

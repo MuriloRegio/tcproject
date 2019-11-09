@@ -9,16 +9,13 @@ def h(actions, initial_state, positive_goals, negative_goals):
 
 	target = Clause(
 		"target",
-		# (positive_goals,negative_goals),
 		(positive_goals,set([])),
 		"",
 	)
-	# joined_goals = positive_goals.union(negative_goals)
 
 	# WILL ENTER IN A LOOP IF AGENT'S UNABLE TO FULLFIL THE GOAL UNDER ANY CIRCUNSTANCE
 	# I.E., ACTION NOT SUPPORTED
 	while True:
-		# if positive_goals.issubset(state):
 		if target.applicable(state):
 			break
 
@@ -29,20 +26,9 @@ def h(actions, initial_state, positive_goals, negative_goals):
 			for grounded in a.ground(state,axis=1):
 				i += 1
 				grounded.neg_pre = set([])
-				# print ('-->', a.name)
-				# print (a.name, a.pos_pre,state, grounded.pos_pre, sep='\n')
 				if grounded.applicable(state):
 					new_state = new_state.union(grounded.pos_pos)
 					j +=1
-				# subgrounds = grounded.ground(joined_goals,axis=1)
-				# subgrounds = grounded.ground(target)
-				# if len(subgrounds) == 0:
-				# 	new_state = new_state.union(grounded.pos_pos)
-				# else:
-				# 	for g in subgrounds:
-				# 		new_state = new_state.union(g.pos_pos)
-		# 	print ("{}/{} -- {}".format(j,i, a.name))
-		# print ('')
 
 		if len(state) == len(new_state):
 			return float("inf")
@@ -68,87 +54,42 @@ def getPlan(initial_state, actions, positive_goals, negative_goals, heuristic):
 
 	count = 0
 	states.put((0,0,initial_state,[]))
-	# print (target)
-	import time
-	start = time.time()
 
 	while not states.empty():
 		cost, _, state, plan = states.get()
 
-		# if any(["has R" in x for x in state]):
-		# 	print (state)
-
 		if target.applicable(state):
-			# print ('LEAVING FROM SUCCESS')
-			# print ("took {:.3f}s".format(time.time()-start))
 			return (True,plan)
 
 		possible_actions = []
 		for a in actions:
 			a.state = state
-			# for grounded in a.ground(target):
-			# 	for subground in grounded.ground(state, axis=1):
-			# 		possible_actions.append(subground)
 
 			for grounded in a.ground(state, axis=1):
 				if grounded not in possible_actions:
 					possible_actions.append(grounded)
 
-					# for new_grounded in grounded.ground(target):
-					# 	if new_grounded not in possible_actions: 
-					# 		possible_actions.append(new_grounded)
-		# for a in possible_actions:
-		# 	print ('============')
-		# 	print (a)
-		# 	print ('============')
-
-		# print ("Found {} possible actions".format(len(filter(l_applicable,possible_actions))))
 
 		#Take a look at applicable
 		for a in filter(l_applicable,possible_actions):
 			new_state = a.apply(state)
-			# new_state = state.union(a.pos_pos).difference(a.neg_pos)
-
-			# print ('===================================')
-			# print (state,a.state,sep='\n')
-			# print ('-->', a.name, '<--')
-			# print ('Old ->', a.pos_pos)
-			# print ('New ->', a.neg_pos)
-			# print ('From ->', state)
-			# print ('To ->', new_state)
-			# print ('===================================')
 
 			key = frozenset(new_state)
 
 			if key in explored:
-				# print ('Already explored!')
 				continue
 
-			# print (new_state)
 			explored.add(key)
 
-			# print('--------------------------------------------------------')
-			# print ('Old -> ')
-			# print ([x for x in state if 'at' in x and 'self' in x])
-			# print('--------------------------------------------------------')
-			# new_cost = cost + heuristic(actions,new_state,positive_goals,negative_goals)
 			new_cost = cost + len(plan)
-			# print (new_cost, [x for x in state if 'has' in x])
-			# new_cost = (cost+1)*(1-target.applicable(new_state))
 
-			# new_cost = target.applicable(new_state)
 			if new_cost == float("inf"):
 				continue
 
 			count += 1
 			new_plan = plan + [a]
 			states.put((new_cost,count,new_state,new_plan))
-		# input('')
-		# print('{}-cycle done'.format(count), states.qsize(), len(explored), sep='\t\t')
-		# input('')
 
-	# print ("took {:.3f}s".format(time.time()-start))
-	# print ('LEAVING FROM FAILURE')
 	#add case of failure, what was the closest it got
 	return (False,[[]])
 
@@ -158,13 +99,11 @@ class Planner:
 		self.h = h
 
 	def getPlan(self,initial_state, actions, positive_goals, negative_goals):
-		# print ([type(x) for x in [initial_state, actions, positive_goals, negative_goals]])
-		# setfy = lambda x : x if type(x) is set else toSet(applyBindings(x,{},actions[0].functions,initial_state))
 		setfy = lambda x : x if type(x) is set else toSet(x,{"bindings":{},"functions":actions[0].functions,"state":initial_state})
 		eval_initial_state = setfy(initial_state)
 		eval_positive_goals = setfy(positive_goals)
 		eval_negative_goals = setfy(negative_goals)
-		# print (eval_initial_state)
+
 		return self.planner(eval_initial_state, actions, eval_positive_goals, eval_negative_goals, self.h)
 
 
@@ -185,7 +124,7 @@ if __name__ == "__main__":
 			"objects":{"box" : (7,1)}
 		}
 
-	## PLANNING DOES NOT CHANGE ENV, THUS NEVER FREEING A PREVIOUSLY OCCUPIED SPACE
+	## PLANNING DOES NOT CHANGE ENV
 	functions = {
 		"free" 	: lambda _state, _env=env : lambda x, y=_env, z=_state : state_free(x,y,z),
 		"close" : lambda _state : lambda x, y : close(x,y),

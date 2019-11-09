@@ -1,4 +1,3 @@
-# foo.__code__.co_varname
 from OLD import *
 
 def read_description(file, walls = '+-|',objs = "RGBCMY",agt = "A"):
@@ -24,11 +23,9 @@ def read_description(file, walls = '+-|',objs = "RGBCMY",agt = "A"):
 def free(coord, env):
 	tmp =  not (tuple(coord) in env["walls"] or \
 			tuple(coord) in [v for _,v in env["objects"].items()])
-	# print (coord, tmp, list(coord) in env["walls"])
 	return tmp
 
 def state_free(coord, env, state):
-	# print(coord, list(coord) in env["walls"])
 	if tuple(coord) in env["walls"]:
 		return False
 
@@ -38,7 +35,7 @@ def state_free(coord, env, state):
 			continue
 		if eval(tokens[1]) == list(coord):
 			return False
-	# print (coord, tmp, list(coord) in env["walls"])
+
 	return True
 
 def front(env):

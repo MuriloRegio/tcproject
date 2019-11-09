@@ -1,7 +1,5 @@
 from OLD import *
 from copy import copy
-from PIL import Image
-import os
 
 def crop(img,coord):
 	return img.crop(coord)
@@ -20,6 +18,7 @@ def cropDict():
 			"return":"obj"}
 
 def paste(img,coord,obj):
+	from PIL import Image
 	size = (coord[2]-coord[0], coord[3]-coord[1])
 	if type(obj) is list:
 		obj = crop(img,obj)
@@ -63,6 +62,7 @@ class ActionMaker():
 								# }
 		self.learned_contracts = []
 
+		import os
 		try:
 			os.mkdir(".learned")
 		except OSError:
@@ -99,16 +99,6 @@ class ActionMaker():
 
 		pars = ','.join(pars)
 
-
-		# assign2 = getSplits(f2,0)
-		# assign1 = getSplits(f1,0)
-
-		# calls1 = getSplits(f1,1)
-		# calls2 = getSplits(f2,1)
-
-		# join = lambda l1,l2: map(lambda x_y: x_y[0]+"="+x_y[1],zip(l1,l2))
-
-		# functs = ';'.join([';'.join(join(assign1,calls1)),';'.join(join(assign2,calls2))])
 		functs = ';'.join([f1,f2])
 
 		#arruma contracts
@@ -127,26 +117,20 @@ class ActionMaker():
 						if s == elem:
 							splits[j+1] = '?'+newName
 
-				# d2_cont[t].remove(c)
-				# d2_cont[t].add(' '.join(splits))
 				tmp_cont[t].add(' '.join(splits))
 		d2_cont = tmp_cont
 
-		# print ('//**', functs, '**\\\\')
 		for c in d2_cont["pre"]:
-			# print ('-->', c)
 			if c in d1_cont["pos"]:
 				d1_cont["pos"].remove(c)
 			else:
 				d1_cont["pre"].add(c)
 
 		for c in d2_cont["pos"]:
-			# print ('-->', c)
 			if len(c) > 5 and c[:5] == "not ":
 				if c[5:] in d1_cont["pos"]:
 					d1_cont["pos"].remove(c[5:])
 			if "not "+c in d1_cont["pos"]:
-				# print ("WELL HELLO THERE")
 				d1_cont["pos"].remove("not "+c)
 
 			d1_cont["pos"].add(c)
@@ -168,14 +152,6 @@ class ActionMaker():
 		return ret_d
 
 	def toFunction(self,op):
-		# try:
-		# 	return self.known_actions[op]
-		# except:
-		# 	try:
-		# 		return self.learned_actions[op]
-		# 	except:
-		# 		return None
-
 		if op in self.known_actions:
 			ret = self.known_actions[op]
 		elif op in self.learned_actions:
@@ -198,12 +174,10 @@ class ActionMaker():
 			aName = line[:line.index('_')]
 			self.learned_actions[aName] = plan
 			self.learned_actions[aName]["name"] = aName
-			# print (plan)
 
 			with open(".learned/a.json","w") as outfile:
 				outfile.write(str(self.learned_actions))
 			#add it to the agent's list
-			# return self.execute(line.replace("noop",aName), img,imgpath,det=det)
 			return self.execute(line, args)
 
 		return None
@@ -222,20 +196,14 @@ class ActionMaker():
 				
 		
 		l_append(self.known_actions)
-		l_append(self.learned_actions)
-
-		# assert len(clauses) == len(self.known_actions)+len(self.learned_actions)
-
-		# print(s0)
-		# print(goal)
-		# input()
+		l_append({})
+		# l_append(self.learned_actions)
 
 		found, plan = solve.getPlan(s0,clauses,target.pos_pre,target.neg_pre)
 
 		return found, (None if not found else solve.clauseListToDictList(self,plan,informed_pars))
 
 	def execute(self,line,args):
-	# def execute(self,line,env):
 		pars = line.split("___")
 		command = pars[0]
 		max_informed_pars = list(args)+[""]*(len(pars)-1)
@@ -245,61 +213,17 @@ class ActionMaker():
 		if fdict is None:
 			return None
 			
-		# fixed, args = args
-		# 	#	args -> derivated from user speech
-		# 	#	fixed -> through other means, e.g., a GUI
-		
 		env = args['env']
 		statefier = args['statefier']
-		# print (args)
-		# par = [y for p in fdict['par'].split(',') for x,y in args.items() if x==p]\
-		# 	 + [y for p in pars[1:] for x,y in args.items() if x==p]
-		par = [y for p1,p2 in zip(fdict['par'].split(','), pars[1:]) for x,y in args.items() if x==p1 or x==p2]
 
-		# args = [env(label) for label in fdict["par"].split(',')]
+		par = [y for p1,p2 in zip(fdict['par'].split(','), pars[1:]) for x,y in args.items() if x==p1 or x==p2]
 
 		pars = fdict["par"].split(",")
 
-		# print (pars, par)
-
-		assert len(par) == len(pars)
-		# print (statefier())
-		# print (funcDict['step'])
-		# input(funcDict["contract"]["pos"])
-
-		# var = {}
-
-		# tmp_pre = fdict["contract"]["pre"].split(' ')
-		# tmp_pos = fdict["contract"]["pos"].split(' ')
-
-		# for label,val in zip(pars,par):
-		# 	var[label] = val
-
-		# 	k = "?{}".format(label)
-		# 	for i,token in enumerate(tmp_pre):
-		# 		if token == k:
-		# 			tmp_pre[i] = "{0}".format(val).replace(" ","") # Spaces are evil
-		# 	for i,token in enumerate(tmp_pos):
-		# 		if token == k:
-		# 			tmp_pos[i] = "{0}".format(val).replace(" ","") # Spaces are evil
-		# 	# if k in tmp_pre:
-		# 	# 	tmp_pre = tmp_pre.replace(k, "{0}").format(val)
-		# 	# if k in tmp_pos:
-		# 	# 	tmp_pos = tmp_pos.replace(k, "{0}").format(val)
-		# 		# tmp_pos = tmp_pos.replace(k, "{}")
-		# 		# print (tmp_pos, val)
-
-		# fdict["contract"]["pre"] = ' '.join(tmp_pre)
-		# fdict["contract"]["pos"] = ' '.join(tmp_pos)
-
-		# fdict["contract"] = self.getContract(fdict,statefier())
-
-		# if fdict["contract"] is None:
-		# 	return None
-
+		assert len(par) >= len(pars)
+		
 		return self.match_params(pars,par,fdict,statefier,env, informed_pars=max_informed_pars)
-		# return self.runDict(fdict,var,env,statefier, informed_pars=max_informed_pars)
-
+		
 
 	def match_params(self,keys,values,fdict, statefier, env, informed_pars=None):
 		from itertools import permutations
@@ -309,10 +233,10 @@ class ActionMaker():
 		steps = fdict["step"].split(";")
 
 		state = statefier()
+		possibilities = list(permutations(values,len(keys)))
+		ignore = []
 
-		f = 0
-
-		for possibility in permutations(values, len(keys)):
+		def getDict(possibility):
 			tmp_dict = copy(fdict)
 			tmp_bind = {}
 
@@ -332,19 +256,38 @@ class ActionMaker():
 
 			tmp_dict["contract"]["pre"] = ' '.join(tmp_pre)
 			tmp_dict["contract"]["pos"] = ' '.join(tmp_pos)
+			return tmp_dict, tmp_bind
+
+		for index, possibility in enumerate(possibilities):
+			tmp_dict, tmp_bind = getDict(possibility)
 
 			try:
 				tmp_dict["contract"] = self.getContract(fdict,statefier())
 				a = self.simulate(state,steps,tmp_dict["contract"]["pos"],tmp_bind)
 			except:
 				a = False
+				ignore.append(index)
 
 			if a:
-				f = 1
 				break
 
-		if not f:
-			found, new_plan = self.findPlan(state, fdict["contract"]["pos"], informed_pars=informed_pars, changed_action=fdict["name"])
+		if not a:
+			for index, possibility in enumerate(possibilities):
+				if index in ignore:
+					continue
+
+				tmp_dict, _ = getDict(possibility)
+				print ('here', possibility)
+
+				try:
+					found, new_plan = self.findPlan(state, tmp_dict["contract"]["pos"], informed_pars=informed_pars, changed_action=tmp_dict["name"])
+				except:
+					found = False
+
+				print ('-->', found)
+				if found:
+					break
+
 			return found if not found else self.match_params(keys,values,new_plan, statefier, env, informed_pars=informed_pars)
 
 		return self.runDict(tmp_dict,tmp_bind,env,statefier,informed_pars=informed_pars)
@@ -356,9 +299,6 @@ class ActionMaker():
 		c = dict2clause(incompleteContract,functions=self.logical_functions,state=state)
 
 		possibilities = c.ground(state,axis=1)
-
-		# print (c)
-		# print (c.getPossibleBindings(state,axis=1))
 
 		if not len(possibilities):
 			return None
@@ -377,13 +317,8 @@ class ActionMaker():
 		getFunc = lambda x : x.split('=')[-1].split('(')[0]
 		getPars = lambda x : x.split('=')[-1].split('(')[1][:-1].split(',')
 
-		# print (getPars(steps[0]),vars)
-
-		# input(poscond)
 		goal = Clause("goal", poscond, "")
 
-		# input(len(steps))
-		# input(goal)
 		for step in steps:
 			comm = getFunc(step)
 			d = self.toFunction(comm)
@@ -400,36 +335,18 @@ class ActionMaker():
 
 				tmp.append(('?'+par[:-3],vars[var[:-3]]))
 
-			# input (c)
 			possibilities = c.ground(state,axis=1,restrictions=tmp)
-			# print (len(possibilities), c.name)
-			# [[possibilities.append(x) for x in tmp.ground(state,axis=1)] for tmp in c.ground(goal)]
-
-			# if len(possibilities)>1:
-			# 	for p in possibilities:
-			# 		print(p.applicable(state), p)
-
-				# input()
-
-			# print ()
-
+		
 			f = 0
 			for p in possibilities:
 				if p.applicable(state):
-					# print (p)
 					state = p.apply(state)
 					f = 1
 					break
 
 			if not f:
-				# print ('==========')
-				# input((step,[str(p) for p in possibilities]))
 				return False
 
-		# print (goal, state)
-		# print(goal.__str__(),state)
-		# if not goal.applicable(state):
-		# 	input(goal.applicable(state))
 		return goal.applicable(state)
 
 	def runDict(self,funcDict,var,env,statefier, informed_pars=None):
@@ -439,14 +356,10 @@ class ActionMaker():
 			assign  = None
 			command = line
 
-			# print (funcDict)
-			# print ('')
 			applicable = bool(self.simulate(statefier(), steps[i:], funcDict["contract"]["pos"],var))
-			# input(applicable)
 			
 			if not applicable:
 				found, new_plan = self.findPlan(statefier(), funcDict["contract"]["pos"], informed_pars=informed_pars, changed_action=funcDict["name"])
-				# return found if not found else self.runDict(new_plan, var, env, statefier, informed_pars=informed_pars)
 				return found if not found else self.match_params(new_plan["par"].split(','), list(var.values()), new_plan, statefier, env, informed_pars=informed_pars)
 
 			if '=' in line:
@@ -460,7 +373,6 @@ class ActionMaker():
 				if func_par in command:
 					command = command.replace(func_par,"var['{}']".format(label))
 
-			# print (command)
 			return_value = eval(command)
 
 			if assign is not None:
@@ -475,9 +387,6 @@ if __name__ == "__main__":
 	from AgtSimulator import env
 	e = env()
 	state = e.statefy()
-
-	# input ("{}".format(e.env["objects"]))
-	# input(type(state))
 
 	functions = {
 		"free" 	: lambda _state, _env=e.env : lambda x, y=_env, z=_state : state_free(x,y,z),
@@ -520,16 +429,6 @@ if __name__ == "__main__":
 	# 	"room_4":[15,5],"room_5":[15,15],"room_6":[15,25],
 	# 	"corridor":[9,15]
 	# })
-
-	# res = a.learned_actions["noop"]
-
-	#res = actor.execute("crop___dog",im,img)
-	# res = actor.createNew("noop___dog___horse", "at ?horse dog and at ?dog horse", im, img, "swap",dets)
-	# coord = [0,0, im.size[0],im.size[1]]
-	# res = actor.execute("crop___"+str(coord),im)
-
-	# if res!=None:
-	# 	print ('->',res)
 
 	if "noop" in a.learned_actions:
 		print ('->',a.learned_actions["noop"])

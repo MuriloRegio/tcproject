@@ -42,7 +42,6 @@ class Clause:
 
 	def applicable(self, state):
 		if '?' in str(self.pos_pre)+str(self.neg_pre):
-			#print ("hey")
 			grounded = self.ground(state,axis=1)
 			g = map(lambda x : x[0].pos_pre.issubset(state) and not x[0].neg_pre.intersection(state),grounded)
 			return any(g)
@@ -56,15 +55,6 @@ class Clause:
 			if e1 not in state:
 				return False
 
-		# for e1 in self.neg_pre: How does THIS work?
-		# 	if "False" in e1:
-		# 		return False
-		# 	if "True" in e1:
-		# 		continue
-		# 	if e1 not state:
-		# 		return False
-
-		# return self.pos_pre.issubset(state) and not self.neg_pre.intersection(state)
 		return not self.neg_pre.intersection(state)
 
 	def getPossibleBindings(self,c,axis=0):
@@ -83,8 +73,6 @@ class Clause:
 			tokenized_c_neg = tokenize(c.neg_pre)
 
 		possibilities = []
-		#print (tokenized_self_pos)
-		#print (list(tokenized_self_pos))
 
 		bindings = {}
 		for t in ["pos", "neg"]:
@@ -113,61 +101,11 @@ class Clause:
 
 		[possibilities.append(dict(pseudo_dict)) for pseudo_dict in getAllBindings(0)]
 
-
-		# for s in tokenized_c_pos:
-		# 	tmp = []
-		# 	for e in filter(lambda x: l_filter(x,s),tokenized_self_pos):
-		# 		bindings = {}
-		# 		for i in range(len(e)-1):
-		# 			if '?' in e[i+1]:
-		# 				bindings[e[i+1]] = s[i+1]
-		# 		# print ('=============/')
-		# 		# print (e,s)
-		# 		# print (bindings)
-		# 		# print ('/=============')
-		# 		if len(list(bindings))>0:
-		# 			add = 1
-		# 			for p in possibilities:
-		# 				if not set(bindings).issubset(set(p)):
-		# 					for k,v in bindings.items():
-		# 						p[k] = v
-		# 					add = 0
-		# 			if add:
-		# 				tmp.append(bindings)
-		# 	possibilities = possibilities + tmp
-
-		# for s in tokenized_c_neg:
-		# 	tmp = []
-		# 	for e in filter(lambda x: l_filter(x,s),tokenized_self_neg):
-		# 		bindings = {}
-		# 		for i in range(len(e)-1):
-		# 			if '?' in e[i+1]:
-		# 				bindings[e[i+1]] = s[i+1]
-
-
-		# 		if len(list(bindings))>0:
-		# 			add = 1
-		# 			for p in possibilities:
-		# 				if not set(bindings).issubset(set(p)):
-		# 					for k,v in bindings.items():
-		# 						p[k] = v
-		# 					add = 0
-		# 			if add:
-		# 				tmp.append(bindings)
-		# 	possibilities = possibilities + tmp
-
-		# if len(possibilities) == 0:
-		# 	return []
-		# threshold = max(map(len,possibilities))
-		# # print possibilities
-		# possibilities = [x for x in possibilities if len(x)==threshold]
 		return possibilities
 
 	def ground(self,c,axis=0, restrictions=None):
 		possibilities = self.getPossibleBindings(c,axis)
 		lapply = lambda _d : lambda x,y=_d : applyBindings(x,y,self.functions,self.state)
-		#print (possibilities)
-		#print (len(possibilities))
 
 		#matching
 		found = []
@@ -181,25 +119,12 @@ class Clause:
 				if skip:
 					continue
 
-			# print (d)
-
-			# grounded_pos_pre = map(lambda x: applyBindings(x,d,self.functions),self.pos_pre)
-			# grounded_neg_pre = map(lambda x: applyBindings(x,d,self.functions),self.neg_pre)
-			# grounded_pos_pos = map(lambda x: applyBindings(x,d,self.functions),self.pos_pos)
-			# grounded_neg_pos = map(lambda x: applyBindings(x,d,self.functions),self.neg_pos)
 			grounded_pos_pre = map(lapply(d),self.pos_pre)
 			grounded_neg_pre = map(lapply(d),self.neg_pre)
 			grounded_pos_pos = map(lapply(d),self.pos_pos)
 			grounded_neg_pos = map(lapply(d),self.neg_pos)
 
 			for d1 in possibilities:
-				# if d1 == d:
-				# 	continue
-
-				# grounded_pos_pre = map(lambda x: applyBindings(x,d1,self.functions),grounded_pos_pre)
-				# grounded_neg_pre = map(lambda x: applyBindings(x,d1,self.functions),grounded_neg_pre)
-				# grounded_pos_pos = map(lambda x: applyBindings(x,d1,self.functions),grounded_pos_pos)
-				# grounded_neg_pos = map(lambda x: applyBindings(x,d1,self.functions),grounded_neg_pos)
 				grounded_pos_pre = map(lapply(d1),grounded_pos_pre)
 				grounded_neg_pre = map(lapply(d1),grounded_neg_pre)
 				grounded_pos_pos = map(lapply(d1),grounded_pos_pos)
@@ -208,8 +133,6 @@ class Clause:
 				if [('?' not in str(grounded_pos_pre)+str(grounded_neg_pre)),('?' not in str(grounded_pos_pos)+str(grounded_neg_pos))][1-axis]:
 					break
 
-			# if [('False' in str(grounded_pos_pre)+str(grounded_neg_pre)),('False' in str(grounded_pos_pos)+str(grounded_neg_pos))][1-axis]:
-			#	continue
 			if [('?' not in str(grounded_pos_pre)+str(grounded_neg_pre)),('?' not in str(grounded_pos_pos)+str(grounded_neg_pos))][1-axis]:
 				grounded_pos_pre = set(grounded_pos_pre)
 				grounded_neg_pre = set(grounded_neg_pre)
@@ -240,11 +163,9 @@ def applyBindings(string, bindings, functions, state):
 				if token == k:
 					token = v
 					break
-		# string = string.replace(k,v)
+
 		tmp.append(token)
 
-	# 	tokens = [x if x != k else v+"-!-" for x in tokens]
-	# return ' '.join(tokens).replace("-!-","")
 	return ' '.join(tmp)
 
 def toSet(str, evaluator=None):
@@ -261,126 +182,6 @@ def getPlan(initial_state, actions, positive_goals, negative_goals):
 	p = planner.Planner()
 	return p.getPlan(initial_state,actions,positive_goals,negative_goals)
 
-# def h(actions, initial_state, positive_goals, negative_goals):
-# 	hmax = 0
-# 	state = initial_state
-# 	new_state = initial_state
-
-# 	l_applicable = lambda a : a.applicable(state)
-	
-# 	c = Clause(
-# 			"",
-# 			(positive_goals,set([])),
-# 			""
-# 		)
-
-# 	while True:
-# 		if positive_goals.issubset(state) or c.applicable(state):
-# 			break
-
-# 		for a in actions:
-# 			for grounded,_ in a.ground(state,axis=1):
-# 				subgrounds = grounded.ground(c)
-# 				if len(subgrounds) == 0:
-# 					new_state = new_state.union(grounded.pos_pos)
-# 				else:
-# 					for g,_ in subgrounds:
-# 						new_state = new_state.union(g.pos_pos)
-
-# 		if len(state) == len(new_state):
-# 			return float("inf")
-		
-# 		state = new_state
-# 		hmax+= 1
-
-# 	return hmax
-
-# def getPlan(initial_state, actions, positive_goals, negative_goals):
-# 	found, plan = getRPlan(initial_state, actions, positive_goals, negative_goals)
-# 	rplan = reversed(plan)
-# 	plan = []
-# 	for act in rplan:
-# 		plan.append(act)
-# 	return found, plan
-
-# def getRPlan(initial_state, actions, positive_goals, negative_goals):
-# 	l_applicable = lambda a : bool(a.pos_pos.intersection(c.pos_pre)) or bool(a.neg_pos.intersection(c.neg_pre))
-
-# 	from Queue import PriorityQueue as PQ
-# 	explored = set([])
-# 	states = PQ()
-
-# 	c = Clause(
-# 			"cur state",
-# 			(positive_goals,negative_goals),
-# 			""
-# 		)
-
-# 	states.put((0,0,c,[]))
-
-# 	possible_actions = []
-
-# 	# for a in actions:
-# 	# 	for grounded,_ in a.ground(c):
-# 	# 		#print str(grounded)
-# 	# 		possible_actions.append(grounded)
-
-# 	# for a in actions:
-# 	# 	# print a
-# 	# 	for grounded,_ in a.ground(initial_state,axis=1):
-# 	# 		possible_actions.append(grounded)
-
-# 	while not states.empty():
-# 		cost, count, c, plan = states.get()
-
-# 		print c
-# 		if c.applicable(initial_state):
-# 			return (True,plan)
-
-# 		for a in actions:
-# 			for grounded,_ in a.ground(c):
-# 				if grounded not in possible_actions: 
-# 					#Should be the same as defining 'possible_actions'
-# 					#as a set, but it isn't
-# 					possible_actions.append(grounded)
-
-# 		for a in possible_actions:
-# 			for grounded,_ in a.ground(initial_state,axis=1):
-# 				if grounded not in possible_actions: 
-# 					possible_actions.append(grounded)
-
-
-# 		for a in filter(l_applicable,possible_actions):
-# 			print a
-# 			new_pos_pre = c.pos_pre.union(a.pos_pre).difference(c.pos_pre.intersection(a.pos_pos))
-# 			new_neg_pre = c.neg_pre.union(a.neg_pre).difference(c.neg_pre.intersection(a.neg_pos))
-
-# 			key = tuple((frozenset(new_pos_pre),frozenset(new_neg_pre)))
-
-# 			if key in explored:
-# 				continue
-
-# 			explored.add(key)
-
-# 			# new_cost = cost + h(actions,initial_state,new_pos_pre,new_neg_pre)
-# 			new_c = Clause(
-# 				"cur state",
-# 				(new_pos_pre,new_neg_pre),
-# 				""
-# 			)
-
-# 			new_cost = new_c.applicable(initial_state)
-
-# 			if new_cost == float("inf"):
-# 				continue
-
-# 			count += 1
-# 			new_plan = plan + [a]
-# 			states.put((new_cost,count,new_c,new_plan))
-
-# 	#add case of failure, what was the closest it got
-# 	return (False,[[]])
-
 def clauseListToDictList(act,clauses, informed_pars=None):
 	from re import sub
 
@@ -393,8 +194,7 @@ def clauseListToDictList(act,clauses, informed_pars=None):
 		fun = c.name.split(" ")[0]
 
 		d = {}
-		# print (fun)
-		# print ([x for x in act.known_actions])
+
 		for k,v in act.toFunction(fun).items():
 			d[k] = v
 
@@ -459,10 +259,7 @@ def clauseListToDictList(act,clauses, informed_pars=None):
 			if old in pars:
 				i = pars.index(old)
 				pars[i] = new
-		# print (steps["distinct"])
-		# for i,p in reversed(enumerate(pars)):
-		# 	if p+"___" not in d["step"]:
-		# 		del pars[i]
+
 		d["par"] = ','.join(pars)
 
 		if dDict is None:
@@ -498,10 +295,8 @@ def clauseListToDictList(act,clauses, informed_pars=None):
 		contract   = dDict["contract"][contType]
 		conditions = contract.split(" and ")
 		for i in range(len(conditions),0,-1):
-			# i = (i+1)*-1
 			i-=1
 
-			# print(conditions[i], conditions, i)
 			vars = conditions[i].split(' ')[1:]
 			d = []
 			for par in dDict["par"].split(","):
@@ -509,7 +304,6 @@ def clauseListToDictList(act,clauses, informed_pars=None):
 				for var in vars:
 					tmp.append(par != var[1:] or '?' not in var)
 				d.append(all(tmp) and len(vars))
-				# d.append(any(tmp))
 
 			if all(d) and '?' in conditions[i]:
 				del conditions[i]
@@ -521,7 +315,6 @@ def clauseListToDictList(act,clauses, informed_pars=None):
 	conditions = dDict["contract"]["pos"].split(" and ")
 	for i,c in reversed(enumerate(conditions)):
 		for token in c.split(' '):
-			# print (token, token in tokens, end='---')
 			if '?' in token and token not in tokens:
 				del conditions[i]
 				break
@@ -579,7 +372,6 @@ if __name__ == "__main__":
 	}
 
 	pu = dict2clause(pickDict(),functions)
-	# dd = dict2clause(dropDict(),functions)
 	u  = dict2clause(stepDict("up"),functions)
 	d  = dict2clause(stepDict("down"),functions)
 	l  = dict2clause(stepDict("left"),functions)
@@ -606,12 +398,9 @@ if __name__ == "__main__":
 	# sys.stdout=tmp
 	# dump.close()
 
-	# print (plan)
 
 	if plan[0]:
 		plan = plan[1]
-		# for p in plan:
-		# 	print (p.name)
 		print (clauseListToDictList(a,plan))
 	else:
 		print("Failed")
